@@ -57,18 +57,18 @@ def ratelimit_handler(e):
     }), 429
 
 @app.route('/')
-@limiter.limit("60 per minute")  # Medium limit for API info
+@limiter.limit(f"{RATE_LIMIT_INFO_PER_MINUTE} per minute")
 def index():
     return jsonify({
         'message': 'Background Remover API',
         'version': '1.0.0',
         'rate_limits': {
-            'default': '1000 per hour, 100 per minute',
-            'remove_background': '10 per minute',
-            'remove_background_preview': '15 per minute',
-            'remove_background_base64': '12 per minute',
-            'health': '200 per minute',
-            'info': '60 per minute'
+            'default': f'{RATE_LIMIT_DEFAULT_PER_HOUR} per hour, {RATE_LIMIT_DEFAULT_PER_MINUTE} per minute',
+            'remove_background': f'{RATE_LIMIT_REMOVE_BG_PER_MINUTE} per minute',
+            'remove_background_preview': f'{RATE_LIMIT_PREVIEW_PER_MINUTE} per minute',
+            'remove_background_base64': f'{RATE_LIMIT_BASE64_PER_MINUTE} per minute',
+            'health': f'{RATE_LIMIT_HEALTH_PER_MINUTE} per minute',
+            'info': f'{RATE_LIMIT_INFO_PER_MINUTE} per minute'
         },
         'endpoints': {
             'remove_background': '/remove-background (POST) - Download hasil sebagai file',
@@ -79,12 +79,12 @@ def index():
     })
 
 @app.route('/health')
-@limiter.limit("200 per minute")  # High limit for health checks
+@limiter.limit(f"{RATE_LIMIT_HEALTH_PER_MINUTE} per minute")
 def health():
     return jsonify({'status': 'healthy', 'service': 'background-remover'})
 
 @app.route('/remove-background', methods=['POST'])
-@limiter.limit("10 per minute")  # Stricter limit for heavy processing
+@limiter.limit(f"{RATE_LIMIT_REMOVE_BG_PER_MINUTE} per minute")
 def remove_background():
     try:
         # Cek apakah file ada di request
@@ -182,7 +182,7 @@ def remove_background():
         return jsonify({'error': f'Server error: {str(e)}'}), 500
 
 @app.route('/remove-background-preview', methods=['POST'])
-@limiter.limit("15 per minute")  # Slightly higher limit for preview
+@limiter.limit(f"{RATE_LIMIT_PREVIEW_PER_MINUTE} per minute")
 def remove_background_preview():
     """
     Endpoint untuk background removal yang mengembalikan image untuk preview di browser
@@ -258,7 +258,7 @@ def remove_background_preview():
         return jsonify({'error': f'Server error: {str(e)}'}), 500
 
 @app.route('/remove-background-base64', methods=['POST'])
-@limiter.limit("12 per minute")  # Medium limit for base64 processing
+@limiter.limit(f"{RATE_LIMIT_BASE64_PER_MINUTE} per minute")
 def remove_background_base64():
     try:
         data = request.get_json()
@@ -367,4 +367,9 @@ if __name__ == '__main__':
     print("  GET /health - Check API health")
     print("  GET / - API info")
 
-    app.run(debug=True, host='0.0.0.0', port=5001)
+    # Konfigurasi server dari environment variables
+    debug_mode = os.getenv('DEBUG', 'True').lower() == 'true'
+    host = os.getenv('HOST', '0.0.0.0')
+    port = int(os.getenv('PORT', 5001))
+
+    app.run(debug=debug_mode, host=host, port=port)
