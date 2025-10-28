@@ -4,7 +4,8 @@
       "Bash(pip install:*)",
       "Bash(python:*)",
       "Bash(curl:*)",
-      "Bash(taskkill:*)"
+      "Bash(taskkill:*)",
+      "Bash(start http://127.0.0.1:5001)"
     ],
     "deny": [],
     "ask": []

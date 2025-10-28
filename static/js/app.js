@@ -116,35 +116,267 @@ function handleFile(file, type) {
 
 // Base64 Input Handler
 function handleBase64Input() {
-    const base64Data = elements.base64Input.value.trim();
+    const input = elements.base64Input.value.trim();
 
-    if (base64Data) {
-        // Basic base64 validation
-        try {
-            // Check if it's a valid base64 string
-            const cleanBase64 = base64Data.replace(/^data:image\/[a-z]+;base64,/, '');
-            const decoded = atob(cleanBase64);
+    if (input) {
+        console.log('DEBUG: Processing input:', input.substring(0, 100) + '...');
 
-            // Store the base64 data
-            currentBase64Data = base64Data;
+        // Check if input is a file path (contains : and \ or /)
+        const isFilePath = /^[A-Za-z]:\\.*\.txt$/.test(input) || /^\/.*\.txt$/.test(input);
 
-            // Enable button
-            elements.base64Btn.disabled = false;
-
-            // Show info
-            const dataLength = cleanBase64.length;
-            const estimatedSize = Math.round(dataLength * 0.75 / 1024);
-            showResult('base64', `Base64 data ready (${estimatedSize} KB estimated)`, false, 'info');
-        } catch (error) {
-            // Invalid base64
-            currentBase64Data = null;
-            elements.base64Btn.disabled = true;
-            showResult('base64', 'Invalid base64 data. Please check your input.', true);
+        if (isFilePath) {
+            console.log('DEBUG: Detected file path, reading file content...');
+            handleFilePathInput(input);
+        } else {
+            console.log('DEBUG: Detected base64 data, validating...');
+            handleBase64DataInput(input);
         }
     } else {
         currentBase64Data = null;
         elements.base64Btn.disabled = true;
         showResult('base64', '', false, 'info');
+    }
+}
+
+// Handle file path input - read file content via API
+async function handleFilePathInput(filePath) {
+    showResult('base64', `
+        <div class="validation-info">
+            <p>📖 Reading file content...</p>
+            <p><strong>File:</strong> ${filePath}</p>
+            <div class="loading-spinner">⏳ Please wait...</div>
+        </div>
+    `, false, 'info');
+
+    try {
+        const response = await fetch(`${API_BASE}/read-file`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ file_path: filePath })
+        });
+
+        console.log('DEBUG: File read response status:', response.status);
+
+        if (response.ok) {
+            const data = await response.json();
+            console.log('DEBUG: File read successful, content length:', data.content?.length || 0);
+
+            if (data.success && data.content) {
+                // Process the content as base64 data
+                handleBase64DataInput(data.content, filePath);
+            } else {
+                showFileReadError('File read failed', data.error || 'Unknown error');
+            }
+        } else {
+            const errorData = await response.json();
+            showFileReadError('File read failed', errorData.error || `HTTP ${response.status}`);
+        }
+    } catch (error) {
+        console.log('DEBUG: Network error reading file:', error);
+        showFileReadError('Network error', error.message);
+    }
+}
+
+// Show file read error
+function showFileReadError(title, error) {
+    currentBase64Data = null;
+    elements.base64Btn.disabled = true;
+
+    const errorMessage = `
+        <div class="validation-error">
+            <p>❌ ${title}</p>
+            <p><strong>Error:</strong> ${error}</p>
+            <div class="validation-tips">
+                <p><strong>Solutions:</strong></p>
+                <ul>
+                    <li>Check if the file path is correct</li>
+                    <li>Ensure the file exists and is accessible</li>
+                    <li>Make sure it's a .txt file</li>
+                    <li>Check file permissions</li>
+                    <li>Try pasting the base64 data directly instead of file path</li>
+                </ul>
+            </div>
+        </div>
+    `;
+
+    showResult('base64', errorMessage, true);
+}
+
+// Handle base64 data input - existing validation logic
+function handleBase64DataInput(base64Data, originalFilePath = null) {
+    console.log('DEBUG: Validating base64 input...');
+
+    // Comprehensive base64 validation
+    const validationResult = validateBase64Input(base64Data);
+
+    if (validationResult.isValid) {
+        // Store the base64 data
+        currentBase64Data = base64Data;
+
+        // Enable button
+        elements.base64Btn.disabled = false;
+
+        // Show info
+        const dataLength = validationResult.cleanData.length;
+        const estimatedSize = Math.round(dataLength * 0.75 / 1024);
+
+        const sourceInfo = originalFilePath ?
+            `<p><strong>Source:</strong> File: ${originalFilePath}</p>` :
+            `<p><strong>Source:</strong> Direct input</p>`;
+
+        showResult('base64', `
+            <div class="validation-success">
+                <p>✅ Valid base64 image data</p>
+                <p><strong>Type:</strong> ${validationResult.imageType}</p>
+                <p><strong>Estimated Size:</strong> ${estimatedSize} KB</p>
+                <p><strong>Data Length:</strong> ${dataLength.toLocaleString()} characters</p>
+                ${sourceInfo}
+            </div>
+        `, false, 'success');
+
+        console.log('DEBUG: Base64 validation passed:', validationResult);
+    } else {
+        // Invalid base64
+        currentBase64Data = null;
+        elements.base64Btn.disabled = true;
+
+        const errorMessage = `
+            <div class="validation-error">
+                <p>❌ Invalid base64 data</p>
+                <p><strong>Issue:</strong> ${validationResult.error}</p>
+                <p><strong>Solution:</strong> ${validationResult.solution}</p>
+                <div class="validation-tips">
+                    <p><strong>Tips:</strong></p>
+                    <ul>
+                        <li>Make sure your base64 data starts with "data:image/..."</li>
+                        <li>Check that the base64 string is not corrupted</li>
+                        <li>Ensure it's a valid image format (PNG, JPG, GIF, etc.)</li>
+                        <li>Try encoding the image again using a reliable tool</li>
+                        <li>If using file path, ensure the .txt file contains valid base64 data</li>
+                    </ul>
+                </div>
+            </div>
+        `;
+
+        showResult('base64', errorMessage, true);
+        console.log('DEBUG: Base64 validation failed:', validationResult);
+    }
+}
+
+// Comprehensive base64 validation function
+function validateBase64Input(base64Data) {
+    console.log('DEBUG: Starting comprehensive base64 validation...');
+
+    // Check if input is empty
+    if (!base64Data || base64Data.trim().length === 0) {
+        return {
+            isValid: false,
+            error: 'Empty input',
+            solution: 'Please paste base64 image data into the textarea',
+            imageType: null,
+            cleanData: null
+        };
+    }
+
+    // Check for data URL format
+    const dataUrlPattern = /^data:image\/([a-zA-Z+]+);base64,([A-Za-z0-9+/]+=*)$/;
+    const match = base64Data.match(dataUrlPattern);
+
+    if (!match) {
+        return {
+            isValid: false,
+            error: 'Invalid base64 format',
+            solution: 'Base64 data must start with "data:image/[format];base64,"',
+            imageType: null,
+            cleanData: null
+        };
+    }
+
+    const imageType = match[1].toLowerCase();
+    const cleanData = match[2];
+
+    // Validate image type
+    const allowedTypes = ['png', 'jpeg', 'jpg', 'gif', 'bmp', 'tiff', 'webp'];
+    if (!allowedTypes.includes(imageType)) {
+        return {
+            isValid: false,
+            error: `Unsupported image type: ${imageType}`,
+            solution: `Please use one of the supported formats: ${allowedTypes.join(', ')}`,
+            imageType: imageType,
+            cleanData: null
+        };
+    }
+
+    // Check if clean data is empty
+    if (!cleanData || cleanData.length === 0) {
+        return {
+            isValid: false,
+            error: 'Empty base64 data',
+            solution: 'The base64 data appears to be empty. Please check your input.',
+            imageType: imageType,
+            cleanData: null
+        };
+    }
+
+    // Validate base64 characters and padding
+    const base64Pattern = /^[A-Za-z0-9+/]*={0,2}$/;
+    if (!base64Pattern.test(cleanData)) {
+        return {
+            isValid: false,
+            error: 'Invalid base64 characters or padding',
+            solution: 'Ensure the base64 data contains only valid base64 characters (A-Z, a-z, 0-9, +, /) and proper padding (=)',
+            imageType: imageType,
+            cleanData: null
+        };
+    }
+
+    // Try to decode to verify it's valid base64
+    try {
+        const decoded = atob(cleanData);
+
+        // Check minimum size (at least 100 bytes for a valid image)
+        if (decoded.length < 100) {
+            return {
+                isValid: false,
+                error: 'Data too small to be a valid image',
+                solution: 'The decoded data is too small. Please ensure you have a complete image file.',
+                imageType: imageType,
+                cleanData: null
+            };
+        }
+
+        // Check maximum size (16MB = ~21 million base64 characters)
+        if (cleanData.length > 21000000) {
+            return {
+                isValid: false,
+                error: 'Data too large',
+                solution: 'Image size exceeds 16MB limit. Please use a smaller image.',
+                imageType: imageType,
+                cleanData: null
+            };
+        }
+
+        console.log('DEBUG: Base64 validation successful. Type:', imageType, 'Size:', decoded.length, 'bytes');
+
+        return {
+            isValid: true,
+            error: null,
+            solution: null,
+            imageType: imageType,
+            cleanData: cleanData,
+            decodedSize: decoded.length
+        };
+
+    } catch (error) {
+        return {
+            isValid: false,
+            error: 'Failed to decode base64 data',
+            solution: 'The base64 data appears to be corrupted. Please try encoding the image again.',
+            imageType: imageType,
+            cleanData: null
+        };
     }
 }
 
@@ -431,43 +663,12 @@ function initializeApp() {
         });
     });
 
-    // Upload area click handlers
+    // Upload area click handlers - simplified since we now have a browse button
     const previewUploadArea = document.getElementById('preview-upload-area');
     console.log('DEBUG: Upload area found:', !!previewUploadArea);
     if (previewUploadArea) {
-        // Add multiple event listeners to ensure it works
-        previewUploadArea.addEventListener('click', function(e) {
-            console.log('DEBUG: Preview upload area clicked!');
-            e.preventDefault();
-            e.stopPropagation();
-
-            const fileInput = document.getElementById('preview-file');
-            console.log('DEBUG: File input found:', !!fileInput);
-            if (fileInput) {
-                console.log('DEBUG: Triggering file input click...');
-                try {
-                    fileInput.click();
-                    console.log('DEBUG: File input click completed');
-                } catch (error) {
-                    console.log('DEBUG: Error clicking file input:', error);
-                }
-            } else {
-                console.log('DEBUG: ERROR - File input not found!');
-            }
-        });
-
-        // Also try onclick as backup
-        previewUploadArea.onclick = function(e) {
-            console.log('DEBUG: Backup onclick triggered');
-            e.preventDefault();
-            e.stopPropagation();
-            const fileInput = document.getElementById('preview-file');
-            if (fileInput) {
-                fileInput.click();
-            }
-        };
-
-        console.log('DEBUG: Upload area event listeners attached');
+        // Only handle drag and drop, let the browse button handle file selection
+        console.log('DEBUG: Upload area drag & drop handlers attached');
     } else {
         console.log('DEBUG: ERROR - Upload area not found!');
     }

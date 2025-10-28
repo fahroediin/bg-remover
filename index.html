@@ -25,7 +25,10 @@
                     <div class="upload-icon">📷</div>
                     <div class="upload-text">Drop your image here or click to browse</div>
                     <div class="upload-hint">PNG, JPG, GIF, BMP, TIFF, WEBP (Max 16MB)</div>
-                    <input type="file" id="preview-file" accept="image/*">
+                    <input type="file" id="preview-file" accept="image/*" style="display: none;">
+                    <button type="button" class="btn btn-secondary browse-btn" onclick="document.getElementById('preview-file').click()">
+                        📁 Browse Files
+                    </button>
                 </div>
 
                 <div style="text-align: center;">
@@ -47,14 +50,18 @@
         <div id="base64-tab" class="tab-content">
             <form id="base64-form" onsubmit="return false;">
                 <div class="base64-input-container">
-                    <label for="base64-input">Paste your base64 image data:</label>
+                    <label for="base64-input">Paste base64 data or file path:</label>
                     <textarea
                         id="base64-input"
                         rows="8"
-                        placeholder="Paste base64 encoded image data here..."
+                        placeholder="Paste base64 encoded image data here... OR paste file path like: C:\Users\User\Downloads\encoded-20251028041641.txt"
                     ></textarea>
                     <div class="hint">
-                        Supported formats: PNG, JPG, GIF, BMP, TIFF, WEBP (base64 encoded)
+                        <strong>Formats supported:</strong><br>
+                        • Base64 image data: data:image/png;base64,xxxxx<br>
+                        • File path: C:\Users\User\Downloads\encoded-20251028041641.txt (only .txt files)<br>
+                        <br>
+                        <strong>Image formats:</strong> PNG, JPG, GIF, BMP, TIFF, WEBP
                     </div>
                 </div>
 
@@ -81,6 +88,6 @@
         </footer>
     </div>
 
-    <script src="/static/js/app.js?v=4"></script>
+    <script src="/static/js/app.js?v=7"></script>
 </body>
 </html>

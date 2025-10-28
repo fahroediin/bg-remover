@@ -376,6 +376,72 @@ def remove_background_preview():
         print(traceback.format_exc())
         return jsonify({'error': f'Server error: {str(e)}'}), 500
 
+@app.route('/read-file', methods=['POST'])
+@limiter.limit(f"{RATE_LIMIT_BASE64_PER_MINUTE} per minute")
+@log_api_access
+@log_file_upload
+def read_file():
+    try:
+        data = request.get_json()
+
+        if not data or 'file_path' not in data:
+            return jsonify({'error': 'No file path provided'}), 400
+
+        file_path = data['file_path']
+        logger.info(f"FILE_READ_REQUEST | Attempting to read file: {file_path}")
+
+        # Security: Validate file path to prevent directory traversal
+        import os
+        import re
+
+        # Basic path validation - only allow certain extensions and no directory traversal
+        if '..' in file_path or file_path.startswith('/') or ':' not in file_path:
+            return jsonify({'error': 'Invalid file path format'}), 400
+
+        # Only allow .txt files for security
+        if not file_path.lower().endswith('.txt'):
+            return jsonify({'error': 'Only .txt files are allowed'}), 400
+
+        # Check if file exists and is within reasonable size
+        try:
+            if not os.path.exists(file_path):
+                return jsonify({'error': f'File not found: {file_path}'}), 404
+
+            file_size = os.path.getsize(file_path)
+            if file_size > 16 * 1024 * 1024:  # 16MB limit
+                return jsonify({'error': 'File too large (max 16MB)'}), 400
+
+            if file_size == 0:
+                return jsonify({'error': 'File is empty'}), 400
+
+        except Exception as e:
+            logger.error(f"FILE_ACCESS_ERROR | {str(e)}")
+            return jsonify({'error': f'Cannot access file: {str(e)}'}), 500
+
+        # Read file content
+        try:
+            with open(file_path, 'r', encoding='utf-8') as f:
+                content = f.read().strip()
+
+            logger.info(f"FILE_READ_SUCCESS | File read successfully: {file_path} ({file_size} bytes)")
+
+            return jsonify({
+                'success': True,
+                'content': content,
+                'file_size': file_size
+            })
+
+        except UnicodeDecodeError:
+            return jsonify({'error': 'File encoding error. Please ensure the file is UTF-8 encoded.'}), 400
+        except Exception as e:
+            logger.error(f"FILE_READ_ERROR | {str(e)}")
+            return jsonify({'error': f'Error reading file: {str(e)}'}), 500
+
+    except Exception as e:
+        logger.error(f"SERVER_ERROR | {str(e)}")
+        logger.error(traceback.format_exc())
+        return jsonify({'error': f'Server error: {str(e)}'}), 500
+
 @app.route('/remove-background-base64', methods=['POST'])
 @limiter.limit(f"{RATE_LIMIT_BASE64_PER_MINUTE} per minute")
 @log_api_access

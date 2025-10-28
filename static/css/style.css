@@ -113,6 +113,14 @@ h1 {
 .upload-hint {
     color: #6c757d;
     font-size: 0.9rem;
+    margin-bottom: 15px;
+}
+
+.browse-btn {
+    margin-top: 15px;
+    font-size: 0.9rem;
+    padding: 8px 16px;
+    border-radius: 6px;
 }
 
 input[type="file"] {
@@ -301,6 +309,79 @@ footer {
 
 footer #app-version {
     font-weight: 600;
+}
+
+/* Validation Messages */
+.validation-success {
+    padding: 15px;
+    background: #d4edda;
+    border: 1px solid #c3e6cb;
+    border-radius: 8px;
+    color: #155724;
+    margin: 10px 0;
+}
+
+.validation-success p {
+    margin: 5px 0;
+}
+
+.validation-info {
+    padding: 15px;
+    background: #d1ecf1;
+    border: 1px solid #bee5eb;
+    border-radius: 8px;
+    color: #0c5460;
+    margin: 10px 0;
+}
+
+.validation-info p {
+    margin: 5px 0;
+}
+
+.validation-error {
+    padding: 15px;
+    background: #f8d7da;
+    border: 1px solid #f5c6cb;
+    border-radius: 8px;
+    color: #721c24;
+    margin: 10px 0;
+}
+
+.validation-error p {
+    margin: 5px 0;
+}
+
+.validation-error strong {
+    color: #721c24;
+}
+
+.validation-tips {
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px solid #f5c6cb;
+}
+
+.validation-tips ul {
+    margin: 5px 0;
+    padding-left: 20px;
+}
+
+.validation-tips li {
+    margin: 3px 0;
+    font-size: 0.9em;
+}
+
+.loading-spinner {
+    text-align: center;
+    margin: 10px 0;
+    font-size: 1.1em;
+    animation: pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse {
+    0% { opacity: 1; }
+    50% { opacity: 0.5; }
+    100% { opacity: 1; }
 }
 
 /* Responsive Design */
