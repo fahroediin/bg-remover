@@ -21,14 +21,11 @@
         <!-- Preview Tab -->
         <div id="preview-tab" class="tab-content active">
             <form id="preview-form" onsubmit="return false;">
-                <div class="upload-area" id="preview-upload-area">
+                <div class="upload-area" id="preview-upload-area" onclick="document.getElementById('preview-file').click()">
                     <div class="upload-icon">📷</div>
                     <div class="upload-text">Drop your image here or click to browse</div>
                     <div class="upload-hint">PNG, JPG, GIF, BMP, TIFF, WEBP (Max 16MB)</div>
                     <input type="file" id="preview-file" accept="image/*" style="display: none;">
-                    <button type="button" class="btn btn-secondary browse-btn" onclick="document.getElementById('preview-file').click()">
-                        📁 Browse Files
-                    </button>
                 </div>
 
                 <div style="text-align: center;">
@@ -40,6 +37,9 @@
                 <div id="preview-loading" class="loading">
                     <div class="spinner"></div>
                     <p>Processing your image...</p>
+                    <div class="progress-bar">
+                        <div class="progress-fill" style="width: 0%"></div>
+                    </div>
                 </div>
 
                 <div id="preview-result" class="result"></div>
@@ -48,36 +48,37 @@
 
         <!-- Base64 Tab -->
         <div id="base64-tab" class="tab-content">
-            <form id="base64-form" onsubmit="return false;">
-                <div class="base64-input-container">
-                    <label for="base64-input">Paste base64 data or file path:</label>
-                    <textarea
-                        id="base64-input"
-                        rows="8"
-                        placeholder="Paste base64 encoded image data here... OR paste file path like: C:\Users\User\Downloads\encoded-20251028041641.txt"
-                    ></textarea>
-                    <div class="hint">
-                        <strong>Formats supported:</strong><br>
-                        • Base64 image data: data:image/png;base64,xxxxx<br>
-                        • File path: C:\Users\User\Downloads\encoded-20251028041641.txt (only .txt files)<br>
-                        <br>
-                        <strong>Image formats:</strong> PNG, JPG, GIF, BMP, TIFF, WEBP
-                    </div>
+            <div class="base64-input-container">
+                <label for="base64-input">Paste base64 data or file path:</label>
+                <textarea
+                    id="base64-input"
+                    rows="8"
+                    placeholder="Paste base64 encoded image data here... OR paste file path like: C:\Users\User\Downloads\encoded-20251028041641.txt"
+                ></textarea>
+                <div class="hint">
+                    <strong>Formats supported:</strong><br>
+                    • Base64 image data: data:image/png;base64,xxxxx<br>
+                    • File path: C:\Users\User\Downloads\encoded-20251028041641.txt (only .txt files)<br>
+                    <br>
+                    <strong>Image formats:</strong> PNG, JPG, GIF, BMP, TIFF, WEBP
                 </div>
+            </div>
 
-                <div style="text-align: center;">
-                    <button id="base64-btn" type="button" class="btn btn-success" disabled>
-                        Remove Background
-                    </button>
+            <div style="text-align: center;">
+                <button id="base64-btn" type="button" class="btn btn-success" disabled>
+                    Remove Background
+                </button>
+            </div>
+
+            <div id="base64-loading" class="loading">
+                <div class="spinner"></div>
+                <p>Processing your base64 image...</p>
+                <div class="progress-bar">
+                    <div class="progress-fill" style="width: 0%"></div>
                 </div>
+            </div>
 
-                <div id="base64-loading" class="loading">
-                    <div class="spinner"></div>
-                    <p>Processing your base64 image...</p>
-                </div>
-
-                <div id="base64-result" class="result"></div>
-            </form>
+            <div id="base64-result" class="result"></div>
         </div>
 
         <!-- Footer -->
@@ -88,6 +89,6 @@
         </footer>
     </div>
 
-    <script src="/static/js/app.js?v=7"></script>
+    <script src="/static/js/app.js?v=9"></script>
 </body>
 </html>

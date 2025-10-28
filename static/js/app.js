@@ -265,119 +265,53 @@ function handleBase64DataInput(base64Data, originalFilePath = null) {
     }
 }
 
-// Comprehensive base64 validation function
+// Simplified base64 validation function - accepts any content from file
 function validateBase64Input(base64Data) {
-    console.log('DEBUG: Starting comprehensive base64 validation...');
+    console.log('DEBUG: Starting simplified base64 validation...');
 
     // Check if input is empty
     if (!base64Data || base64Data.trim().length === 0) {
         return {
             isValid: false,
             error: 'Empty input',
-            solution: 'Please paste base64 image data into the textarea',
+            solution: 'Please paste base64 image data or file path',
             imageType: null,
             cleanData: null
         };
     }
 
-    // Check for data URL format
-    const dataUrlPattern = /^data:image\/([a-zA-Z+]+);base64,([A-Za-z0-9+/]+=*)$/;
-    const match = base64Data.match(dataUrlPattern);
-
-    if (!match) {
-        return {
-            isValid: false,
-            error: 'Invalid base64 format',
-            solution: 'Base64 data must start with "data:image/[format];base64,"',
-            imageType: null,
-            cleanData: null
-        };
-    }
-
-    const imageType = match[1].toLowerCase();
-    const cleanData = match[2];
-
-    // Validate image type
-    const allowedTypes = ['png', 'jpeg', 'jpg', 'gif', 'bmp', 'tiff', 'webp'];
-    if (!allowedTypes.includes(imageType)) {
-        return {
-            isValid: false,
-            error: `Unsupported image type: ${imageType}`,
-            solution: `Please use one of the supported formats: ${allowedTypes.join(', ')}`,
-            imageType: imageType,
-            cleanData: null
-        };
-    }
-
-    // Check if clean data is empty
-    if (!cleanData || cleanData.length === 0) {
-        return {
-            isValid: false,
-            error: 'Empty base64 data',
-            solution: 'The base64 data appears to be empty. Please check your input.',
-            imageType: imageType,
-            cleanData: null
-        };
-    }
-
-    // Validate base64 characters and padding
-    const base64Pattern = /^[A-Za-z0-9+/]*={0,2}$/;
-    if (!base64Pattern.test(cleanData)) {
-        return {
-            isValid: false,
-            error: 'Invalid base64 characters or padding',
-            solution: 'Ensure the base64 data contains only valid base64 characters (A-Z, a-z, 0-9, +, /) and proper padding (=)',
-            imageType: imageType,
-            cleanData: null
-        };
-    }
-
-    // Try to decode to verify it's valid base64
-    try {
-        const decoded = atob(cleanData);
-
-        // Check minimum size (at least 100 bytes for a valid image)
-        if (decoded.length < 100) {
-            return {
-                isValid: false,
-                error: 'Data too small to be a valid image',
-                solution: 'The decoded data is too small. Please ensure you have a complete image file.',
-                imageType: imageType,
-                cleanData: null
-            };
-        }
-
-        // Check maximum size (16MB = ~21 million base64 characters)
-        if (cleanData.length > 21000000) {
-            return {
-                isValid: false,
-                error: 'Data too large',
-                solution: 'Image size exceeds 16MB limit. Please use a smaller image.',
-                imageType: imageType,
-                cleanData: null
-            };
-        }
-
-        console.log('DEBUG: Base64 validation successful. Type:', imageType, 'Size:', decoded.length, 'bytes');
-
+    // If it's a file path, return valid (we'll read the file content via API)
+    const isFilePath = /^[A-Za-z]:\\.*\.txt$/i.test(base64Data);
+    if (isFilePath) {
         return {
             isValid: true,
             error: null,
             solution: null,
-            imageType: imageType,
-            cleanData: cleanData,
-            decodedSize: decoded.length
-        };
-
-    } catch (error) {
-        return {
-            isValid: false,
-            error: 'Failed to decode base64 data',
-            solution: 'The base64 data appears to be corrupted. Please try encoding the image again.',
-            imageType: imageType,
-            cleanData: null
+            imageType: 'txt',
+            cleanData: base64Data,
+            decodedSize: base64Data.length
         };
     }
+
+    // For direct base64 data, only check if it's not empty
+    if (base64Data.length > 0) {
+        return {
+            isValid: true,
+            error: null,
+            solution: null,
+            imageType: 'base64',
+            cleanData: base64Data,
+            decodedSize: base64Data.length
+        };
+    }
+
+    return {
+        isValid: false,
+        error: 'Invalid or empty input',
+        solution: 'Please paste valid base64 data or a file path to a .txt file',
+        imageType: null,
+        cleanData: null
+    };
 }
 
 // UI Helper Functions
@@ -404,9 +338,46 @@ function showLoading(type, show = true) {
     if (show) {
         loadingElement.classList.add('show');
         btnElement.disabled = true;
+        // Start progress animation
+        animateProgress(type);
     } else {
         loadingElement.classList.remove('show');
         btnElement.disabled = false;
+        // Reset progress bar
+        resetProgress(type);
+    }
+}
+
+// Progress bar animation
+function animateProgress(type) {
+    const progressFill = document.querySelector(`#${type}-loading .progress-fill`);
+    if (!progressFill) return;
+
+    let progress = 0;
+    const interval = setInterval(() => {
+        progress += Math.random() * 15; // Random increment for natural effect
+        if (progress >= 90) {
+            progress = 90; // Stop at 90% until complete
+            clearInterval(interval);
+        }
+        progressFill.style.width = progress + '%';
+    }, 300);
+}
+
+function resetProgress(type) {
+    const progressFill = document.querySelector(`#${type}-loading .progress-fill`);
+    if (progressFill) {
+        progressFill.style.width = '0%';
+    }
+}
+
+function completeProgress(type) {
+    const progressFill = document.querySelector(`#${type}-loading .progress-fill`);
+    if (progressFill) {
+        progressFill.style.width = '100%';
+        setTimeout(() => {
+            resetProgress(type);
+        }, 500);
     }
 }
 
@@ -461,23 +432,20 @@ async function processBase64(event) {
                 const imageSize = Math.round(data.image.length * 0.75 / 1024);
 
                 console.log('DEBUG: Showing result to user');
+                // Complete progress before showing result
+                completeProgress('base64');
+
                 showResult('base64', `
                     <h3>Background removed successfully!</h3>
-                    <div class="image-comparison">
-                        <div class="image-box">
-                            <div class="image-label">Original</div>
-                            <img src="${currentBase64Data}" alt="Original" class="image-preview">
-                        </div>
-                        <div class="image-box">
-                            <div class="image-label">Result</div>
-                            <img src="${imageUrl}" alt="Result" class="image-preview">
-                        </div>
+                    <div class="image-box" style="text-align: center; margin: 20px 0;">
+                        <div class="image-label" style="margin-bottom: 15px; font-weight: 600; color: #495057;">Result</div>
+                        <img src="${imageUrl}" alt="Result" class="image-preview" style="max-width: 100%; max-height: 400px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);">
                     </div>
                     <div class="stats">
                         <p><strong>Image Size:</strong> ${imageSize} KB</p>
                         <p><strong>Base64 Length:</strong> ${data.image.length.toLocaleString()} characters</p>
                     </div>
-                    <div class="actions">
+                    <div class="actions" style="text-align: center; margin-top: 20px;">
                         <button type="button" class="btn btn-secondary" data-action="copy" data-text="${data.image.replace(/'/g, "\\'")}">
                             Copy Base64
                         </button>
@@ -825,6 +793,9 @@ async function processPreviewLocal() {
             const blob = await response.blob();
             const imageUrl = URL.createObjectURL(blob);
 
+            // Complete progress before showing result
+            completeProgress('preview');
+
             showResult('preview', `
                 <h3>Background removed successfully!</h3>
                 <div class="image-comparison">
@@ -889,23 +860,20 @@ async function processBase64Local() {
                 const imageSize = Math.round(data.image.length * 0.75 / 1024);
 
                 console.log('DEBUG: Showing result to user');
+                // Complete progress before showing result
+                completeProgress('base64');
+
                 showResult('base64', `
                     <h3>Background removed successfully!</h3>
-                    <div class="image-comparison">
-                        <div class="image-box">
-                            <div class="image-label">Original</div>
-                            <img src="${currentBase64Data}" alt="Original" class="image-preview">
-                        </div>
-                        <div class="image-box">
-                            <div class="image-label">Result</div>
-                            <img src="${imageUrl}" alt="Result" class="image-preview">
-                        </div>
+                    <div class="image-box" style="text-align: center; margin: 20px 0;">
+                        <div class="image-label" style="margin-bottom: 15px; font-weight: 600; color: #495057;">Result</div>
+                        <img src="${imageUrl}" alt="Result" class="image-preview" style="max-width: 100%; max-height: 400px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);">
                     </div>
                     <div class="stats">
                         <p><strong>Image Size:</strong> ${imageSize} KB</p>
                         <p><strong>Base64 Length:</strong> ${data.image.length.toLocaleString()} characters</p>
                     </div>
-                    <div class="actions">
+                    <div class="actions" style="text-align: center; margin-top: 20px;">
                         <button type="button" class="btn btn-secondary" data-action="copy" data-text="${data.image.replace(/'/g, "\\'")}">
                             Copy Base64
                         </button>
