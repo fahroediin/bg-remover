@@ -186,14 +186,34 @@ Jika limit ter-exceed:
 - 🎨 **Background**: Transparan
 - 🖼️ **Object**: Dipertahankan dengan kualitas tinggi
 
-## 🧪 Testing
+## 🧪 Testing & Frontend
 
-### Test Web Interface
-Buka `test.html` di browser untuk testing semua endpoints.
+### 🌐 Simple Web Frontend
+Buka `test.html` di browser untuk testing API dengan **frontend yang sederhana**:
 
-### Test Rate Limiting
+**Features:**
+- 📱 **Clean & minimal** design
+- 🖱️ **Drag & drop** file upload
+- 👁️ **2 Tab Navigation**: Preview & Base64
+- ⏳ **Simple loading** indicators
+- 🔁 **Side-by-side comparison** (original vs result)
+- 📋 **Copy to clipboard** untuk base64 results
+- 📥 **Direct download** dari browser
+
+### Tab Navigation:
+1. **👁️ Preview**: Upload & preview hasil di browser
+2. **🔤 Base64**: Upload & dapatkan hasil dalam format base64
+
+### API Testing (cURL)
 ```bash
-# Test 15 requests (limit 10/minute)
+# Test health endpoint
+curl http://localhost:5001/health
+
+# Test file upload
+curl -X POST -F "file=@test.jpg" \
+  http://localhost:5001/remove-background-preview
+
+# Test rate limiting
 for i in {1..15}; do
   curl -X POST -F "file=@test.jpg" \
     http://localhost:5001/remove-background
@@ -227,12 +247,24 @@ python app.py
 
 ## 📄 Files
 
-- `app.py` - Main application
-- `.env` - Environment configuration (development)
-- `.env.production` - Production configuration template
+### Core Application
+- `app.py` - Main Flask application
 - `requirements.txt` - Python dependencies
-- `test.html` - Web testing interface
-- `DEPLOYMENT.md` - Deployment guide
+
+### Configuration
+- `.env.sample` - **Environment template** (copy to .env)
+- `.env.production` - Production configuration template
+- `.env` - **Your local configuration** (not in git)
+
+### Setup & Testing
+- `setup.sh` - Linux/macOS setup script
+- `setup.bat` - Windows setup script
+- `test.html` - **Modern web frontend** with drag & drop, tabs, and API monitoring
+
+### Documentation
+- `README.md` - This file
+- `DEPLOYMENT.md` - Production deployment guide
+- `.gitignore` - Git ignore rules
 
 ---
 
@@ -250,3 +282,40 @@ python app.py
 **CORS issues?**
 1. Set `CORS_ORIGINS` ke domain yang benar
 2. Check preflight OPTIONS requests
+
+## 🔒 Security Best Practices
+
+### Environment Variables
+- ✅ **Use `.env.sample`** sebagai template
+- ✅ **Never commit `.env`** ke version control
+- ✅ **Use different values** untuk development & production
+- ✅ **Secure sensitive data** seperti API keys dan passwords
+
+### File Security
+- ✅ **`.gitignore`** sudah dikonfigurasi dengan aman
+- ✅ **Upload validation** untuk file types & sizes
+- ✅ **Auto-cleanup** untuk temporary files
+- ✅ **Rate limiting** untuk mencegah abuse
+
+### Production Security
+- ✅ **Set `DEBUG=False`** di production
+- ✅ **Use Redis** untuk rate limiting storage
+- ✅ **Configure `CORS_ORIGINS`** ke domain spesifik
+- ✅ **Monitor API usage** dan rate limit violations
+- ✅ **Use HTTPS** di production (nginx/apache reverse proxy)
+
+### Recommended File Structure
+```
+bg-remover/
+├── .env.sample          # Template (safe to commit)
+├── .env.production      # Production template (safe to commit)
+├── .env                 # Your config (NEVER commit)
+├── .gitignore           # Security rules
+├── setup.sh/.bat        # Setup scripts
+├── app.py               # Main application
+├── requirements.txt     # Dependencies
+├── test.html           # Testing interface
+├── uploads/            # Temporary uploads (auto-cleaned)
+├── outputs/            # Temporary outputs (auto-cleaned)
+└── DEPLOYMENT.md       # Production guide
+```
