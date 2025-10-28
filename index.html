@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Background Remover</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Background Remover</h1>
+            <p class="subtitle">Remove backgrounds from your images instantly</p>
+        </header>
+
+        <div class="tabs">
+            <button class="tab active" onclick="switchTab('preview')">Preview</button>
+            <button class="tab" onclick="switchTab('base64')">Base64</button>
+        </div>
+
+        <!-- Preview Tab -->
+        <div id="preview-tab" class="tab-content active">
+            <form id="preview-form" onsubmit="return false;">
+                <div class="upload-area" id="preview-upload-area"
+                     ondrop="window.handleDrop(event, 'preview')"
+                     ondragover="window.handleDragOver(event)"
+                     ondragleave="window.handleDragLeave(event)">
+                    <div class="upload-icon">📷</div>
+                    <div class="upload-text">Drop your image here or click to browse</div>
+                    <div class="upload-hint">PNG, JPG, GIF, BMP, TIFF, WEBP (Max 16MB)</div>
+                    <input type="file" id="preview-file" accept="image/*" onchange="window.handleFileSelect(event, 'preview')">
+                </div>
+
+                <div style="text-align: center;">
+                    <button id="preview-btn" type="button" class="btn btn-primary" disabled>
+                        Remove Background
+                    </button>
+                </div>
+
+                <div id="preview-loading" class="loading">
+                    <div class="spinner"></div>
+                    <p>Processing your image...</p>
+                </div>
+
+                <div id="preview-result" class="result"></div>
+            </form>
+        </div>
+
+        <!-- Base64 Tab -->
+        <div id="base64-tab" class="tab-content">
+            <form id="base64-form" onsubmit="return false;">
+                <div class="base64-input-container">
+                    <label for="base64-input">Paste your base64 image data:</label>
+                    <textarea
+                        id="base64-input"
+                        rows="8"
+                        placeholder="Paste base64 encoded image data here..."
+                    ></textarea>
+                    <div class="hint">
+                        Supported formats: PNG, JPG, GIF, BMP, TIFF, WEBP (base64 encoded)
+                    </div>
+                </div>
+
+                <div style="text-align: center;">
+                    <button id="base64-btn" type="button" class="btn btn-success" disabled>
+                        Remove Background
+                    </button>
+                </div>
+
+                <div id="base64-loading" class="loading">
+                    <div class="spinner"></div>
+                    <p>Processing your base64 image...</p>
+                </div>
+
+                <div id="base64-result" class="result"></div>
+            </form>
+        </div>
+
+        <!-- Footer -->
+        <footer>
+            <div id="app-info">
+                <p>Version: <span id="app-version">v1.0.0</span></p>
+            </div>
+        </footer>
+    </div>
+
+    <script src="/static/js/app.js"></script>
+</body>
+</html>
