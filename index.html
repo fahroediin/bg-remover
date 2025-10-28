@@ -63,25 +63,35 @@
 
         <!-- Base64 Tab -->
         <div id="base64-tab" class="tab-content">
-            <div class="base64-input-container">
-                <label for="base64-input">Paste base64 data or file path:</label>
-                <textarea
-                    id="base64-input"
-                    rows="8"
-                    placeholder="Paste base64 encoded image data here... OR paste file path like: C:\Users\User\Downloads\encoded-20251028041641.txt"
-                ></textarea>
-                <div class="hint">
-                    <strong>Formats supported:</strong><br>
-                    • Base64 image data: data:image/png;base64,xxxxx<br>
-                    • File path: C:\Users\User\Downloads\encoded-20251028041641.txt (only .txt files)<br>
-                    <br>
-                    <strong>Image formats:</strong> PNG, JPG, GIF, BMP, TIFF, WEBP
+            <!-- Base64 Input Area -->
+            <div id="base64-input-container">
+                <div class="base64-input-container">
+                    <label for="base64-input">Paste base64 data or file path:</label>
+                    <textarea
+                        id="base64-input"
+                        rows="8"
+                        placeholder="Paste base64 encoded image data here... OR paste file path like: C:\Users\User\Downloads\encoded-20251028041641.txt"
+                    ></textarea>
+                    <div class="hint">
+                        <strong>Formats supported:</strong><br>
+                        • Base64 image data: data:image/png;base64,xxxxx<br>
+                        • File path: C:\Users\User\Downloads\encoded-20251028041641.txt (only .txt files)<br>
+                        <br>
+                        <strong>Image formats:</strong> PNG, JPG, GIF, BMP, TIFF, WEBP
+                    </div>
+                </div>
+
+                <div style="text-align: center;">
+                    <button id="base64-btn" type="button" class="btn btn-success" disabled>
+                        Remove Background
+                    </button>
                 </div>
             </div>
 
-            <div style="text-align: center;">
-                <button id="base64-btn" type="button" class="btn btn-success" disabled>
-                    Remove Background
+            <!-- Process Other File Button (Hidden by default) -->
+            <div id="base64-new-file-container" style="display: none; text-align: center; margin: 30px 0;">
+                <button id="base64-new-file-btn" type="button" class="btn btn-secondary">
+                    📁 Process Other File
                 </button>
             </div>
 
@@ -104,6 +114,6 @@
         </footer>
     </div>
 
-    <script src="/static/js/app.js?v=11"></script>
+    <script src="/static/js/app.js?v=12"></script>
 </body>
 </html>

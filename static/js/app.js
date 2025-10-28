@@ -29,6 +29,11 @@ function initializeElements() {
     elements.previewNewFileContainer = document.getElementById('preview-new-file-container');
     elements.previewNewFileBtn = document.getElementById('preview-new-file-btn');
 
+    // New base64 elements
+    elements.base64InputContainer = document.getElementById('base64-input-container');
+    elements.base64NewFileContainer = document.getElementById('base64-new-file-container');
+    elements.base64NewFileBtn = document.getElementById('base64-new-file-btn');
+
     // Debug: Check if all elements are found
     console.log('DEBUG: Elements found:', {
         previewFile: !!elements.previewFile,
@@ -42,7 +47,10 @@ function initializeElements() {
         appVersion: !!elements.appVersion,
         previewUploadContainer: !!elements.previewUploadContainer,
         previewNewFileContainer: !!elements.previewNewFileContainer,
-        previewNewFileBtn: !!elements.previewNewFileBtn
+        previewNewFileBtn: !!elements.previewNewFileBtn,
+        base64InputContainer: !!elements.base64InputContainer,
+        base64NewFileContainer: !!elements.base64NewFileContainer,
+        base64NewFileBtn: !!elements.base64NewFileBtn
     });
 }
 
@@ -462,6 +470,9 @@ async function processBase64(event) {
                         </button>
                     </div>
                 `, false);
+
+                // Show result and hide input area
+                showBase64Result();
             } else {
                 console.log('DEBUG: API returned error:', data.error);
                 showResult('base64', `Error: ${data.error}`, true);
@@ -695,6 +706,17 @@ function initializeApp() {
         });
     }
 
+    // Process other file button event listener for base64
+    if (elements.base64NewFileBtn) {
+        elements.base64NewFileBtn.addEventListener('click', function(e) {
+            console.log('DEBUG: Base64 process other file button clicked');
+            e.preventDefault();
+            e.stopPropagation();
+            e.stopImmediatePropagation();
+            showBase64Input();
+        });
+    }
+
     // Base64 input event listeners
     if (elements.base64Input) {
         elements.base64Input.addEventListener('input', handleBase64Input);
@@ -836,6 +858,54 @@ function showPreviewUpload() {
     currentFiles.preview = null;
 }
 
+// Base64 UI State Management Functions
+function showBase64Result() {
+    console.log('DEBUG: Showing base64 result, hiding input area');
+
+    // Hide input container
+    if (elements.base64InputContainer) {
+        elements.base64InputContainer.style.display = 'none';
+    }
+
+    // Show "Process other file" button
+    if (elements.base64NewFileContainer) {
+        elements.base64NewFileContainer.style.display = 'block';
+    }
+}
+
+function showBase64Input() {
+    console.log('DEBUG: Showing base64 input, hiding result');
+
+    // Show input container
+    if (elements.base64InputContainer) {
+        elements.base64InputContainer.style.display = 'block';
+    }
+
+    // Hide "Process other file" button
+    if (elements.base64NewFileContainer) {
+        elements.base64NewFileContainer.style.display = 'none';
+    }
+
+    // Clear result
+    if (elements.base64Result) {
+        elements.base64Result.className = 'result';
+        elements.base64Result.innerHTML = '';
+    }
+
+    // Reset input
+    if (elements.base64Input) {
+        elements.base64Input.value = '';
+    }
+
+    // Reset button state
+    if (elements.base64Btn) {
+        elements.base64Btn.disabled = true;
+    }
+
+    // Clear current base64 data
+    currentBase64Data = null;
+}
+
 // Create local versions for internal calls
 async function processPreviewLocal() {
     console.log('DEBUG: processPreviewLocal called');
@@ -952,6 +1022,9 @@ async function processBase64Local() {
                         </button>
                     </div>
                 `, false);
+
+                // Show result and hide input area
+                showBase64Result();
             } else {
                 console.log('DEBUG: API returned error:', data.error);
                 showResult('base64', `Error: ${data.error}`, true);
