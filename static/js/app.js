@@ -1,7 +1,21 @@
 // Background Remover API - Frontend JavaScript
 
 // Configuration
-const API_BASE = 'http://127.0.0.1:5001';
+// Use the same domain and protocol as the current page
+const API_BASE = window.location.protocol + '//' + window.location.hostname +
+                 (window.location.port ? ':' + window.location.port : '');
+
+// Debug mode - disable in production
+const DEBUG_MODE = window.location.hostname === 'localhost' ||
+                   window.location.hostname === '127.0.0.1' ||
+                   window.location.hostname.includes('dev');
+
+// Debug logging function
+function debugLog(...args) {
+    if (DEBUG_MODE) {
+        console.log(...args);
+    }
+}
 let currentFiles = {
     preview: null,
     base64: null
@@ -13,7 +27,7 @@ const elements = {};
 
 // Initialize DOM elements
 function initializeElements() {
-    console.log('DEBUG: Initializing DOM elements...');
+    debugLog('DEBUG: Initializing DOM elements...');
     elements.previewFile = document.getElementById('preview-file');
     elements.base64Input = document.getElementById('base64-input');
     elements.previewBtn = document.getElementById('preview-btn');
@@ -23,6 +37,7 @@ function initializeElements() {
     elements.previewResult = document.getElementById('preview-result');
     elements.base64Result = document.getElementById('base64-result');
     elements.appVersion = document.getElementById('app-version');
+    elements.appName = document.getElementById('app-name');
 
     // New preview elements
     elements.previewUploadContainer = document.getElementById('preview-upload-container');
@@ -49,7 +64,7 @@ function initializeElements() {
     elements.base64MaxHeight = document.getElementById('base64-max-height');
 
     // Debug: Check if all elements are found
-    console.log('DEBUG: Elements found:', {
+    debugLog('DEBUG: Elements found:', {
         previewFile: !!elements.previewFile,
         base64Input: !!elements.base64Input,
         previewBtn: !!elements.previewBtn,
@@ -59,6 +74,7 @@ function initializeElements() {
         previewResult: !!elements.previewResult,
         base64Result: !!elements.base64Result,
         appVersion: !!elements.appVersion,
+        appName: !!elements.appName,
         previewUploadContainer: !!elements.previewUploadContainer,
         previewNewFileContainer: !!elements.previewNewFileContainer,
         previewNewFileBtn: !!elements.previewNewFileBtn,
@@ -82,7 +98,7 @@ function initializeElements() {
 
 // Tab Management
 function switchTab(tabName, targetElement) {
-    console.log('DEBUG: switchTab called with tabName:', tabName);
+    debugLog('DEBUG: switchTab called with tabName:', tabName);
 
     // Hide all tabs
     document.querySelectorAll('.tab-content').forEach(tab => {
@@ -154,9 +170,9 @@ function handleFile(file, type) {
     // Show optimization options for preview tab
     if (elements.previewOptions) {
         elements.previewOptions.style.display = 'block';
-        console.log('DEBUG: Showing preview options');
+        debugLog('DEBUG: Showing preview options');
     } else {
-        console.log('DEBUG: Preview options element not found');
+        debugLog('DEBUG: Preview options element not found');
     }
 
     // Show file info with optimization tip
@@ -271,16 +287,16 @@ function handleBase64Input() {
     const input = elements.base64Input.value.trim();
 
     if (input) {
-        console.log('DEBUG: Processing input:', input.substring(0, 100) + '...');
+        debugLog('DEBUG: Processing input:', input.substring(0, 100) + '...');
 
         // Check if input is a file path (contains : and \ or /)
         const isFilePath = /^[A-Za-z]:\\.*\.txt$/.test(input) || /^\/.*\.txt$/.test(input);
 
         if (isFilePath) {
-            console.log('DEBUG: Detected file path, reading file content...');
+            debugLog('DEBUG: Detected file path, reading file content...');
             handleFilePathInput(input);
         } else {
-            console.log('DEBUG: Detected base64 data, validating...');
+            debugLog('DEBUG: Detected base64 data, validating...');
             handleBase64DataInput(input);
         }
     } else {
@@ -309,11 +325,11 @@ async function handleFilePathInput(filePath) {
             body: JSON.stringify({ file_path: filePath })
         });
 
-        console.log('DEBUG: File read response status:', response.status);
+        debugLog('DEBUG: File read response status:', response.status);
 
         if (response.ok) {
             const data = await response.json();
-            console.log('DEBUG: File read successful, content length:', data.content?.length || 0);
+            debugLog('DEBUG: File read successful, content length:', data.content?.length || 0);
 
             if (data.success && data.content) {
                 // Process the content as base64 data
@@ -326,7 +342,7 @@ async function handleFilePathInput(filePath) {
             showFileReadError('File read failed', errorData.error || `HTTP ${response.status}`);
         }
     } catch (error) {
-        console.log('DEBUG: Network error reading file:', error);
+        debugLog('DEBUG: Network error reading file:', error);
         showFileReadError('Network error', error.message);
     }
 }
@@ -358,7 +374,7 @@ function showFileReadError(title, error) {
 
 // Handle base64 data input - existing validation logic
 function handleBase64DataInput(base64Data, originalFilePath = null) {
-    console.log('DEBUG: Validating base64 input...');
+    debugLog('DEBUG: Validating base64 input...');
 
     // Comprehensive base64 validation
     const validationResult = validateBase64Input(base64Data);
@@ -394,7 +410,7 @@ function handleBase64DataInput(base64Data, originalFilePath = null) {
             </div>
         `, false, 'success');
 
-        console.log('DEBUG: Base64 validation passed:', validationResult);
+        debugLog('DEBUG: Base64 validation passed:', validationResult);
     } else {
         // Invalid base64
         currentBase64Data = null;
@@ -419,13 +435,13 @@ function handleBase64DataInput(base64Data, originalFilePath = null) {
         `;
 
         showResult('base64', errorMessage, true);
-        console.log('DEBUG: Base64 validation failed:', validationResult);
+        debugLog('DEBUG: Base64 validation failed:', validationResult);
     }
 }
 
 // Simplified base64 validation function - accepts any content from file
 function validateBase64Input(base64Data) {
-    console.log('DEBUG: Starting simplified base64 validation...');
+    debugLog('DEBUG: Starting simplified base64 validation...');
 
     // Check if input is empty
     if (!base64Data || base64Data.trim().length === 0) {
@@ -544,21 +560,21 @@ function completeProgress(type) {
 
 // API Processing Functions
 async function processPreview(event) {
-    console.log('DEBUG: processPreview called with event:', event);
+    debugLog('DEBUG: processPreview called with event:', event);
     if (event) {
         event.preventDefault();
         event.stopPropagation();
-        console.log('DEBUG: Event prevented and stopped propagation');
+        debugLog('DEBUG: Event prevented and stopped propagation');
     }
     await processFile('preview', '/remove-background-preview', 'preview');
 }
 
 async function processBase64(event) {
-    console.log('DEBUG: processBase64 called with event:', event);
+    debugLog('DEBUG: processBase64 called with event:', event);
     if (event) {
         event.preventDefault();
         event.stopPropagation();
-        console.log('DEBUG: Event prevented and stopped propagation');
+        debugLog('DEBUG: Event prevented and stopped propagation');
     }
 
     if (!currentBase64Data) {
@@ -566,7 +582,7 @@ async function processBase64(event) {
         return;
     }
 
-    console.log('DEBUG: Starting base64 processing');
+    debugLog('DEBUG: Starting base64 processing');
     showLoading('base64', true);
 
     try {
@@ -578,7 +594,7 @@ async function processBase64(event) {
             image: currentBase64Data,
             ...optimizationParams
         };
-        console.log('DEBUG: Sending request to API with params:', optimizationParams);
+        debugLog('DEBUG: Sending request to API with params:', optimizationParams);
 
         const response = await fetch(`${API_BASE}/remove-background-base64`, {
             method: 'POST',
@@ -588,17 +604,17 @@ async function processBase64(event) {
             body: JSON.stringify(payload)
         });
 
-        console.log('DEBUG: API response received, status:', response.status);
+        debugLog('DEBUG: API response received, status:', response.status);
 
         if (response.ok) {
             const data = await response.json();
-            console.log('DEBUG: API response data:', data);
+            debugLog('DEBUG: API response data:', data);
 
             if (data.success) {
                 const imageUrl = `data:${data.mimetype};base64,${data.image}`;
                 const imageSize = Math.round(data.image.length * 0.75 / 1024);
 
-                console.log('DEBUG: Showing result to user');
+                debugLog('DEBUG: Showing result to user');
                 // Complete progress before showing result
                 completeProgress('base64');
 
@@ -641,19 +657,19 @@ async function processBase64(event) {
                 // Show result and hide input area
                 showBase64Result();
             } else {
-                console.log('DEBUG: API returned error:', data.error);
+                debugLog('DEBUG: API returned error:', data.error);
                 showResult('base64', `Error: ${data.error}`, true);
             }
         } else {
             const errorText = await response.text();
-            console.log('DEBUG: API error response:', errorText);
+            debugLog('DEBUG: API error response:', errorText);
             showResult('base64', `Error: ${errorText}`, true);
         }
     } catch (error) {
-        console.log('DEBUG: Network error:', error);
+        debugLog('DEBUG: Network error:', error);
         showResult('base64', `Network Error: ${error.message}`, true);
     } finally {
-        console.log('DEBUG: Removing loading state');
+        debugLog('DEBUG: Removing loading state');
         showLoading('base64', false);
     }
 }
@@ -794,22 +810,32 @@ async function copyToClipboard(text) {
 // App Info Loading
 async function loadAppInfo() {
     try {
-        const response = await fetch(`${API_BASE}/`);
+        const response = await fetch(`${API_BASE}/api`);
         if (response.ok) {
             const data = await response.json();
             if (data.version) {
                 elements.appVersion.textContent = `v${data.version}`;
             }
+            if (data.app_name && elements.appName) {
+                // Update page title if app name element exists
+                const pageTitle = document.querySelector('title');
+                if (pageTitle) {
+                    pageTitle.textContent = data.app_name;
+                }
+
+                // Update app name in footer
+                elements.appName.textContent = data.app_name;
+            }
         }
     } catch (error) {
         // Keep default values if API is not available
-        console.log('Using default app info');
+        debugLog('Using default app info');
     }
 }
 
 // Initialize Application
 function initializeApp() {
-    console.log('DEBUG: Initializing app...');
+    debugLog('DEBUG: Initializing app...');
     initializeElements();
 
     // Load app info
@@ -818,7 +844,7 @@ function initializeApp() {
     // Add comprehensive event prevention for ALL forms
     document.querySelectorAll('form').forEach(form => {
         form.addEventListener('submit', function(e) {
-            console.log('DEBUG: Form submit prevented');
+            debugLog('DEBUG: Form submit prevented');
             e.preventDefault();
             e.stopPropagation();
             return false;
@@ -828,7 +854,7 @@ function initializeApp() {
     // Tab switching event listeners
     document.querySelectorAll('.tab').forEach(tab => {
         tab.addEventListener('click', function(e) {
-            console.log('DEBUG: Tab clicked:', e.target.textContent);
+            debugLog('DEBUG: Tab clicked:', e.target.textContent);
             e.preventDefault();
             e.stopPropagation();
 
@@ -839,24 +865,24 @@ function initializeApp() {
 
     // Upload area click handlers - simplified since we now have a browse button
     const previewUploadArea = document.getElementById('preview-upload-area');
-    console.log('DEBUG: Upload area found:', !!previewUploadArea);
+    debugLog('DEBUG: Upload area found:', !!previewUploadArea);
     if (previewUploadArea) {
         // Only handle drag and drop, let the browse button handle file selection
-        console.log('DEBUG: Upload area drag & drop handlers attached');
+        debugLog('DEBUG: Upload area drag & drop handlers attached');
     } else {
-        console.log('DEBUG: ERROR - Upload area not found!');
+        debugLog('DEBUG: ERROR - Upload area not found!');
     }
 
     // File input handlers
     if (elements.previewFile) {
         elements.previewFile.addEventListener('change', function(e) {
-            console.log('DEBUG: Preview file selected, files:', e.target.files);
+            debugLog('DEBUG: Preview file selected, files:', e.target.files);
             e.preventDefault();
             if (e.target.files && e.target.files.length > 0) {
-                console.log('DEBUG: Processing file:', e.target.files[0].name);
+                debugLog('DEBUG: Processing file:', e.target.files[0].name);
                 handleFile(e.target.files[0], 'preview');
             } else {
-                console.log('DEBUG: No files selected');
+                debugLog('DEBUG: No files selected');
             }
         });
     }
@@ -864,7 +890,7 @@ function initializeApp() {
     // Button event listeners with comprehensive prevention
     if (elements.previewBtn) {
         elements.previewBtn.addEventListener('click', function(e) {
-            console.log('DEBUG: Preview button clicked');
+            debugLog('DEBUG: Preview button clicked');
             e.preventDefault();
             e.stopPropagation();
             e.stopImmediatePropagation();
@@ -874,7 +900,7 @@ function initializeApp() {
 
     if (elements.base64Btn) {
         elements.base64Btn.addEventListener('click', function(e) {
-            console.log('DEBUG: Base64 button clicked');
+            debugLog('DEBUG: Base64 button clicked');
             e.preventDefault();
             e.stopPropagation();
             e.stopImmediatePropagation();
@@ -885,7 +911,7 @@ function initializeApp() {
     // Process other file button event listener
     if (elements.previewNewFileBtn) {
         elements.previewNewFileBtn.addEventListener('click', function(e) {
-            console.log('DEBUG: Process other file button clicked');
+            debugLog('DEBUG: Process other file button clicked');
             e.preventDefault();
             e.stopPropagation();
             e.stopImmediatePropagation();
@@ -896,7 +922,7 @@ function initializeApp() {
     // Process other file button event listener for base64
     if (elements.base64NewFileBtn) {
         elements.base64NewFileBtn.addEventListener('click', function(e) {
-            console.log('DEBUG: Base64 process other file button clicked');
+            debugLog('DEBUG: Base64 process other file button clicked');
             e.preventDefault();
             e.stopPropagation();
             e.stopImmediatePropagation();
@@ -949,7 +975,7 @@ function initializeApp() {
     if (elements.base64Input) {
         elements.base64Input.addEventListener('keydown', function(e) {
             if (e.key === 'Enter' && e.ctrlKey) {
-                console.log('DEBUG: Ctrl+Enter detected in textarea');
+                debugLog('DEBUG: Ctrl+Enter detected in textarea');
                 e.preventDefault();
                 e.stopPropagation();
                 e.stopImmediatePropagation();
@@ -971,7 +997,7 @@ function initializeApp() {
         });
 
         previewUploadArea.addEventListener('drop', function(e) {
-            console.log('DEBUG: Files dropped on preview area');
+            debugLog('DEBUG: Files dropped on preview area');
             e.preventDefault();
             e.stopPropagation();
             e.currentTarget.classList.remove('dragover');
@@ -986,7 +1012,7 @@ function initializeApp() {
     // Event delegation for action buttons (copy/download)
     document.addEventListener('click', function(e) {
         if (e.target.matches('[data-action="copy"]')) {
-            console.log('DEBUG: Copy button clicked');
+            debugLog('DEBUG: Copy button clicked');
             e.preventDefault();
             e.stopPropagation();
             const text = e.target.getAttribute('data-text');
@@ -996,7 +1022,7 @@ function initializeApp() {
         }
 
         if (e.target.matches('[data-action="download"]')) {
-            console.log('DEBUG: Download button clicked');
+            debugLog('DEBUG: Download button clicked');
             e.preventDefault();
             e.stopPropagation();
             const url = e.target.getAttribute('data-url');
@@ -1009,7 +1035,7 @@ function initializeApp() {
 
     // Comprehensive form submission prevention at document level
     document.addEventListener('submit', function(e) {
-        console.log('DEBUG: Document-level submit prevented');
+        debugLog('DEBUG: Document-level submit prevented');
         e.preventDefault();
         e.stopPropagation();
         e.stopImmediatePropagation();
@@ -1018,7 +1044,7 @@ function initializeApp() {
 
     // Prevent any navigation or page reload attempts
     window.addEventListener('beforeunload', function(e) {
-        console.log('DEBUG: Beforeunload event detected');
+        debugLog('DEBUG: Beforeunload event detected');
         // Don't show confirmation dialog, just log it
     });
 
@@ -1029,7 +1055,7 @@ function initializeApp() {
 
 // Preview UI State Management Functions
 function showPreviewResult() {
-    console.log('DEBUG: Showing preview result, hiding upload area');
+    debugLog('DEBUG: Showing preview result, hiding upload area');
 
     // Hide upload container
     if (elements.previewUploadContainer) {
@@ -1043,7 +1069,7 @@ function showPreviewResult() {
 }
 
 function showPreviewUpload() {
-    console.log('DEBUG: Showing preview upload, hiding result');
+    debugLog('DEBUG: Showing preview upload, hiding result');
 
     // Show upload container
     if (elements.previewUploadContainer) {
@@ -1082,7 +1108,7 @@ function showPreviewUpload() {
 
 // Base64 UI State Management Functions
 function showBase64Result() {
-    console.log('DEBUG: Showing base64 result, hiding input area');
+    debugLog('DEBUG: Showing base64 result, hiding input area');
 
     // Hide input container
     if (elements.base64InputContainer) {
@@ -1096,7 +1122,7 @@ function showBase64Result() {
 }
 
 function showBase64Input() {
-    console.log('DEBUG: Showing base64 input, hiding result');
+    debugLog('DEBUG: Showing base64 input, hiding result');
 
     // Show input container
     if (elements.base64InputContainer) {
@@ -1135,7 +1161,7 @@ function showBase64Input() {
 
 // Create local versions for internal calls
 async function processPreviewLocal() {
-    console.log('DEBUG: processPreviewLocal called');
+    debugLog('DEBUG: processPreviewLocal called');
 
     if (!currentFiles.preview) {
         showResult('preview', 'Please select a file first', true);
@@ -1150,7 +1176,7 @@ async function processPreviewLocal() {
     try {
         // Get optimization parameters
         const optimizationParams = getOptimizationParams('preview');
-        console.log('DEBUG: Preview optimization params:', optimizationParams);
+        debugLog('DEBUG: Preview optimization params:', optimizationParams);
 
         // Add optimization parameters to FormData
         Object.keys(optimizationParams).forEach(key => {
@@ -1224,14 +1250,14 @@ async function processPreviewLocal() {
 }
 
 async function processBase64Local() {
-    console.log('DEBUG: processBase64Local called');
+    debugLog('DEBUG: processBase64Local called');
 
     if (!currentBase64Data) {
         showResult('base64', 'Please enter base64 image data first', true);
         return;
     }
 
-    console.log('DEBUG: Starting base64 processing');
+    debugLog('DEBUG: Starting base64 processing');
     showLoading('base64', true);
 
     try {
@@ -1243,7 +1269,7 @@ async function processBase64Local() {
             image: currentBase64Data,
             ...optimizationParams
         };
-        console.log('DEBUG: Sending request to API with params:', optimizationParams);
+        debugLog('DEBUG: Sending request to API with params:', optimizationParams);
 
         const response = await fetch(`${API_BASE}/remove-background-base64`, {
             method: 'POST',
@@ -1253,17 +1279,17 @@ async function processBase64Local() {
             body: JSON.stringify(payload)
         });
 
-        console.log('DEBUG: API response received, status:', response.status);
+        debugLog('DEBUG: API response received, status:', response.status);
 
         if (response.ok) {
             const data = await response.json();
-            console.log('DEBUG: API response data:', data);
+            debugLog('DEBUG: API response data:', data);
 
             if (data.success) {
                 const imageUrl = `data:${data.mimetype};base64,${data.image}`;
                 const imageSize = Math.round(data.image.length * 0.75 / 1024);
 
-                console.log('DEBUG: Showing result to user');
+                debugLog('DEBUG: Showing result to user');
                 // Complete progress before showing result
                 completeProgress('base64');
 
@@ -1306,26 +1332,26 @@ async function processBase64Local() {
                 // Show result and hide input area
                 showBase64Result();
             } else {
-                console.log('DEBUG: API returned error:', data.error);
+                debugLog('DEBUG: API returned error:', data.error);
                 showResult('base64', `Error: ${data.error}`, true);
             }
         } else {
             const errorText = await response.text();
-            console.log('DEBUG: API error response:', errorText);
+            debugLog('DEBUG: API error response:', errorText);
             showResult('base64', `Error: ${errorText}`, true);
         }
     } catch (error) {
-        console.log('DEBUG: Network error:', error);
+        debugLog('DEBUG: Network error:', error);
         showResult('base64', `Network Error: ${error.message}`, true);
     } finally {
-        console.log('DEBUG: Removing loading state');
+        debugLog('DEBUG: Removing loading state');
         showLoading('base64', false);
     }
 }
 
 // Utility functions
 function downloadImage(imageUrl, originalName) {
-    console.log('DEBUG: Downloading image:', originalName);
+    debugLog('DEBUG: Downloading image:', originalName);
     const a = document.createElement('a');
     a.href = imageUrl;
     a.download = `no-bg-${originalName.split('.')[0]}.png`;
@@ -1335,7 +1361,7 @@ function downloadImage(imageUrl, originalName) {
 }
 
 function copyToClipboard(text) {
-    console.log('DEBUG: Copying to clipboard');
+    debugLog('DEBUG: Copying to clipboard');
     try {
         navigator.clipboard.writeText(text);
         alert('Base64 data copied to clipboard!');

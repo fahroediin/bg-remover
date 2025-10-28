@@ -18,7 +18,14 @@ from functools import wraps
 load_dotenv()
 
 app = Flask(__name__)
-CORS(app)
+
+# Configure CORS from environment variables
+cors_origins = os.getenv('CORS_ORIGINS', '*')
+if cors_origins != '*':
+    # Split comma-separated origins and strip whitespace
+    cors_origins = [origin.strip() for origin in cors_origins.split(',')]
+
+CORS(app, origins=cors_origins)
 
 # Configure logging
 LOG_LEVEL = os.getenv('LOG_LEVEL', 'INFO')
