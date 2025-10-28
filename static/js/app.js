@@ -1360,22 +1360,6 @@ function downloadImage(imageUrl, originalName) {
     document.body.removeChild(a);
 }
 
-function copyToClipboard(text) {
-    debugLog('DEBUG: Copying to clipboard');
-    try {
-        navigator.clipboard.writeText(text);
-        alert('Base64 data copied to clipboard!');
-    } catch (err) {
-        // Fallback for older browsers
-        const textArea = document.createElement('textarea');
-        textArea.value = text;
-        document.body.appendChild(textArea);
-        textArea.select();
-        document.execCommand('copy');
-        document.body.removeChild(textArea);
-        alert('Base64 data copied to clipboard!');
-    }
-}
 
 // Event Listeners
 document.addEventListener('DOMContentLoaded', initializeApp);
