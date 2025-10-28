@@ -11,6 +11,7 @@ import io
 import traceback
 import logging
 import datetime
+import base64
 from functools import wraps
 
 # Load environment variables from .env file
@@ -155,6 +156,91 @@ def favicon():
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
+def optimize_image(image_data, output_format='PNG', quality=85, max_width=None, max_height=None):
+    """
+    Optimize image data with format, quality, and size options
+
+    Args:
+        image_data: Raw image data from rembg
+        output_format: 'PNG', 'JPEG', or 'WEBP'
+        quality: 1-100 for JPEG/WEBP quality
+        max_width: Maximum width (None to keep original)
+        max_height: Maximum height (None to keep original)
+
+    Returns:
+        Optimized image data
+    """
+    try:
+        # Open image with PIL
+        img = Image.open(io.BytesIO(image_data))
+        original_size = len(image_data)
+
+        # Convert to RGB if needed for JPEG
+        if output_format.upper() in ['JPEG', 'JPG'] and img.mode in ['RGBA', 'LA']:
+            # Create white background for JPEG
+            background = Image.new('RGB', img.size, (255, 255, 255))
+            if img.mode == 'RGBA':
+                background.paste(img, mask=img.split()[-1])  # Use alpha channel as mask
+            else:
+                background.paste(img)
+            img = background
+        elif output_format.upper() == 'WEBP' and img.mode in ['RGBA', 'LA']:
+            # WEBP supports transparency, keep original mode
+            pass
+        elif output_format.upper() == 'PNG':
+            # PNG supports transparency, keep original mode
+            pass
+
+        # Resize if max dimensions specified
+        if max_width or max_height:
+            img.thumbnail((max_width or img.width, max_height or img.height), Image.Resampling.LANCZOS)
+
+        # Save with optimization
+        output_io = io.BytesIO()
+
+        if output_format.upper() in ['JPEG', 'JPG']:
+            img.save(output_io, format='JPEG', quality=quality, optimize=True, progressive=True)
+        elif output_format.upper() == 'WEBP':
+            img.save(output_io, format='WEBP', quality=quality, optimize=True, method=6)
+        else:  # PNG
+            img.save(output_io, format='PNG', optimize=True, compress_level=6)
+
+        output_io.seek(0)
+        result = output_io.getvalue()
+
+        # Log compression results for monitoring
+        compression_ratio = ((1 - len(result) / original_size) * 100)
+        print(f"Image optimized: {original_size} -> {len(result)} bytes ({compression_ratio:.1f}% reduction)")
+
+        return result
+
+    except Exception as e:
+        print(f"Error optimizing image: {str(e)}")
+        # Return original data if optimization fails
+        return image_data
+
+def get_image_info(image_data):
+    """Get image information for display"""
+    try:
+        img = Image.open(io.BytesIO(image_data))
+        return {
+            'width': img.width,
+            'height': img.height,
+            'mode': img.mode,
+            'format': img.format or 'Unknown',
+            'size_bytes': len(image_data),
+            'size_mb': round(len(image_data) / (1024 * 1024), 2)
+        }
+    except:
+        return {
+            'width': 'Unknown',
+            'height': 'Unknown',
+            'mode': 'Unknown',
+            'format': 'Unknown',
+            'size_bytes': len(image_data) if image_data else 0,
+            'size_mb': round(len(image_data) / (1024 * 1024), 2) if image_data else 0
+        }
+
 # Error handler for rate limiting
 @app.errorhandler(429)
 def ratelimit_handler(e):
@@ -226,10 +312,38 @@ def remove_background():
                 'allowed_types': list(ALLOWED_EXTENSIONS)
             }), 400
 
+        # Get optimization parameters from form
+        output_format = request.form.get('format', 'PNG').upper()
+        quality = int(request.form.get('quality', 85))
+        max_width = request.form.get('max_width')
+        max_height = request.form.get('max_height')
+
+        # Validate format
+        if output_format not in ['PNG', 'JPEG', 'JPG', 'WEBP']:
+            output_format = 'PNG'
+
+        # Validate quality
+        quality = max(1, min(100, quality))
+
+        # Parse dimensions
+        if max_width:
+            try:
+                max_width = int(max_width) if max_width and max_width.strip() else None
+            except:
+                max_width = None
+
+        if max_height:
+            try:
+                max_height = int(max_height) if max_height and max_height.strip() else None
+            except:
+                max_height = None
+
+        print(f"Processing with optimization: {output_format}, quality={quality}, size={max_width}x{max_height}")
+
         # Generate unique filename
         file_id = str(uuid.uuid4())
         input_filename = f"{file_id}_input.png"
-        output_filename = f"{file_id}_output.png"
+        output_filename = f"{file_id}_output.{output_format.lower() if output_format != 'JPG' else 'jpg'}"
         input_path = os.path.join(UPLOAD_FOLDER, input_filename)
         output_path = os.path.join(OUTPUT_FOLDER, output_filename)
 
@@ -260,22 +374,48 @@ def remove_background():
 
             # Proses background removal
             print(f"Processing image: {file.filename}")
-            output_data = remove(img_data_for_rembg.read())
+            raw_output_data = remove(img_data_for_rembg.read())
+
+            # Get original image info
+            original_info = get_image_info(image_data)
+            print(f"Original image: {original_info}")
+
+            # Optimize the output
+            optimized_output_data = optimize_image(
+                raw_output_data,
+                output_format=output_format,
+                quality=quality,
+                max_width=max_width,
+                max_height=max_height
+            )
+
+            # Get optimized image info
+            optimized_info = get_image_info(optimized_output_data)
+            print(f"Optimized image: {optimized_info}")
 
             # Simpan hasil
             with open(output_path, 'wb') as f:
-                f.write(output_data)
+                f.write(optimized_output_data)
+
+            # Determine file extension for download
+            download_ext = 'jpg' if output_format == 'JPG' else output_format.lower()
+            download_name = f"removed_bg_{file.filename.rsplit('.', 1)[0]}.{download_ext}"
 
             # Kembalikan hasil sebagai file
             response = send_file(
                 output_path,
                 as_attachment=True,
-                download_name=f"removed_bg_{file.filename.rsplit('.', 1)[0]}.png",
-                mimetype='image/png'
+                download_name=download_name,
+                mimetype=f'image/{output_format.lower()}'
             )
 
+            # Add optimization info headers
+            response.headers['X-Original-Size'] = str(original_info['size_bytes'])
+            response.headers['X-Optimized-Size'] = str(optimized_info['size_bytes'])
+            response.headers['X-Compression-Ratio'] = str(round((1 - optimized_info['size_bytes'] / original_info['size_bytes']) * 100, 1)) if original_info['size_bytes'] > 0 else '0'
+
             # Tambahkan headers untuk memastikan download bekerja dengan baik di browser
-            response.headers['Access-Control-Expose-Headers'] = 'Content-Disposition'
+            response.headers['Access-Control-Expose-Headers'] = 'Content-Disposition, X-Original-Size, X-Optimized-Size, X-Compression-Ratio'
             response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
             response.headers['Pragma'] = 'no-cache'
             response.headers['Expires'] = '0'
@@ -330,6 +470,34 @@ def remove_background_preview():
                 'allowed_types': list(ALLOWED_EXTENSIONS)
             }), 400
 
+        # Get optimization parameters from form
+        output_format = request.form.get('format', 'PNG').upper()
+        quality = int(request.form.get('quality', 85))
+        max_width = request.form.get('max_width')
+        max_height = request.form.get('max_height')
+
+        # Validate format
+        if output_format not in ['PNG', 'JPEG', 'JPG', 'WEBP']:
+            output_format = 'PNG'
+
+        # Validate quality
+        quality = max(1, min(100, quality))
+
+        # Parse dimensions
+        if max_width:
+            try:
+                max_width = int(max_width) if max_width and max_width.strip() else None
+            except:
+                max_width = None
+
+        if max_height:
+            try:
+                max_height = int(max_height) if max_height and max_height.strip() else None
+            except:
+                max_height = None
+
+        print(f"Processing with optimization: {output_format}, quality={quality}, size={max_width}x{max_height}")
+
         try:
             # Baca file gambar
             image_data = file.read()
@@ -355,15 +523,37 @@ def remove_background_preview():
 
             # Proses background removal
             print(f"Processing image for preview: {file.filename}")
-            output_data = remove(img_data_for_rembg.read())
+            raw_output_data = remove(img_data_for_rembg.read())
+
+            # Optimize the output for preview (use smaller dimensions for faster loading)
+            preview_max_width = min(max_width or 800, 800)  # Cap at 800px for preview
+            preview_max_height = min(max_height or 600, 600)  # Cap at 600px for preview
+
+            optimized_output_data = optimize_image(
+                raw_output_data,
+                output_format=output_format,
+                quality=quality,
+                max_width=preview_max_width,
+                max_height=preview_max_height
+            )
+
+            # Get image info for response headers
+            optimized_info = get_image_info(optimized_output_data)
 
             # Kembalikan hasil sebagai image yang bisa ditampilkan di browser
-            return send_file(
-                io.BytesIO(output_data),
-                mimetype='image/png',
+            response = send_file(
+                io.BytesIO(optimized_output_data),
+                mimetype=f'image/{output_format.lower()}',
                 as_attachment=False,
                 download_name=None
             )
+
+            # Add optimization info to headers
+            response.headers['X-Image-Width'] = str(optimized_info['width'])
+            response.headers['X-Image-Height'] = str(optimized_info['height'])
+            response.headers['X-Image-Size'] = str(optimized_info['size_bytes'])
+
+            return response
 
         except OSError as e:
             # Handle specific OS errors like Invalid argument
@@ -458,7 +648,33 @@ def remove_background_base64():
         if not data or 'image' not in data:
             return jsonify({'error': 'No image data provided'}), 400
 
-        import base64
+        # Get optimization parameters
+        output_format = data.get('format', 'PNG').upper()
+        quality = int(data.get('quality', 85))
+        max_width = data.get('max_width')
+        max_height = data.get('max_height')
+
+        # Validate format
+        if output_format not in ['PNG', 'JPEG', 'JPG', 'WEBP']:
+            output_format = 'PNG'
+
+        # Validate quality
+        quality = max(1, min(100, quality))
+
+        # Parse dimensions
+        if max_width:
+            try:
+                max_width = int(max_width) if str(max_width).strip() else None
+            except:
+                max_width = None
+
+        if max_height:
+            try:
+                max_height = int(max_height) if str(max_height).strip() else None
+            except:
+                max_height = None
+
+        print(f"Processing base64 with optimization: {output_format}, quality={quality}, size={max_width}x{max_height}")
 
         # Decode base64
         try:
@@ -487,26 +703,55 @@ def remove_background_base64():
 
         # Generate unique filename
         file_id = str(uuid.uuid4())
-        output_filename = f"{file_id}_output.png"
+        output_filename = f"{file_id}_output.{output_format.lower() if output_format != 'JPG' else 'jpg'}"
         output_path = os.path.join(OUTPUT_FOLDER, output_filename)
 
         try:
             # Proses background removal
             print("Processing base64 image")
-            output_data = remove(img_data_for_rembg.read())
+            raw_output_data = remove(img_data_for_rembg.read())
+
+            # Get original image info
+            original_info = get_image_info(image_data)
+
+            # Optimize the output
+            optimized_output_data = optimize_image(
+                raw_output_data,
+                output_format=output_format,
+                quality=quality,
+                max_width=max_width,
+                max_height=max_height
+            )
+
+            # Get optimized image info
+            optimized_info = get_image_info(optimized_output_data)
 
             # Simpan hasil
             with open(output_path, 'wb') as f:
-                f.write(output_data)
+                f.write(optimized_output_data)
 
             # Encode hasil ke base64
             with open(output_path, 'rb') as f:
                 result_base64 = base64.b64encode(f.read()).decode('utf-8')
 
+            # Calculate compression info
+            compression_ratio = 0
+            if original_info['size_bytes'] > 0:
+                compression_ratio = round((1 - optimized_info['size_bytes'] / original_info['size_bytes']) * 100, 1)
+
             return jsonify({
                 'success': True,
                 'image': result_base64,
-                'mimetype': 'image/png'
+                'mimetype': f'image/{output_format.lower()}',
+                'info': {
+                    'original_size': original_info['size_bytes'],
+                    'optimized_size': optimized_info['size_bytes'],
+                    'compression_ratio': compression_ratio,
+                    'width': optimized_info['width'],
+                    'height': optimized_info['height'],
+                    'format': output_format,
+                    'quality': quality
+                }
             })
 
         except OSError as e:

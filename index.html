@@ -8,6 +8,8 @@
     <link rel="icon" type="image/png" href="/static/favicon.png">
     <link rel="shortcut icon" type="image/png" href="/static/favicon.png">
     <link rel="apple-touch-icon" href="/static/favicon.png">
+    <!-- SweetAlert -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <!-- Styles -->
     <link rel="stylesheet" href="/static/css/style.css">
 </head>
@@ -33,6 +35,42 @@
                         <div class="upload-text">Drop your image here or click to browse</div>
                         <div class="upload-hint">PNG, JPG, GIF, BMP, TIFF, WEBP (Max 16MB)</div>
                         <input type="file" id="preview-file" accept="image/*" style="display: none;">
+                    </div>
+
+                    <!-- Optimization Options -->
+                    <div id="preview-options" class="optimization-options" style="display: none;">
+                        <h4>🎨 Output Options</h4>
+                        <div class="options-grid">
+                            <div class="option-group">
+                                <label for="preview-format">Format:</label>
+                                <select id="preview-format" class="form-select">
+                                    <option value="JPEG">JPEG (White Background) - Recommended</option>
+                                    <option value="WEBP">WEBP (Modern Format) - Best Compression</option>
+                                    <option value="PNG">PNG (Transparent Background)</option>
+                                </select>
+                            </div>
+                            <div class="option-group">
+                                <label for="preview-quality">Quality: <span id="preview-quality-value">85</span>%</label>
+                                <input type="range" id="preview-quality" min="10" max="100" value="85" class="form-range">
+                                <small class="text-muted">Lower quality = smaller file size</small>
+                            </div>
+                        </div>
+                        <div class="options-grid">
+                            <div class="option-group">
+                                <label for="preview-max-width">Max Width (px):</label>
+                                <input type="number" id="preview-max-width" min="100" max="4000" placeholder="Original" class="form-input">
+                            </div>
+                            <div class="option-group">
+                                <label for="preview-max-height">Max Height (px):</label>
+                                <input type="number" id="preview-max-height" min="100" max="4000" placeholder="Original" class="form-input">
+                            </div>
+                        </div>
+                        <div class="quick-presets">
+                            <strong>Quick Presets:</strong>
+                            <button type="button" class="preset-btn" data-preset="web">Web (800x600, JPEG 80%)</button>
+                            <button type="button" class="preset-btn" data-preset="social">Social (1080x1080, PNG 90%)</button>
+                            <button type="button" class="preset-btn" data-preset="print">Print (300DPI, PNG 95%)</button>
+                        </div>
                     </div>
 
                     <div style="text-align: center;">
@@ -81,6 +119,42 @@
                     </div>
                 </div>
 
+                <!-- Base64 Optimization Options -->
+                <div id="base64-options" class="optimization-options" style="display: none;">
+                    <h4>🎨 Output Options</h4>
+                    <div class="options-grid">
+                        <div class="option-group">
+                            <label for="base64-format">Format:</label>
+                            <select id="base64-format" class="form-select">
+                                <option value="JPEG">JPEG (White Background) - Recommended</option>
+                                <option value="WEBP">WEBP (Modern Format) - Best Compression</option>
+                                <option value="PNG">PNG (Transparent Background)</option>
+                            </select>
+                        </div>
+                        <div class="option-group">
+                            <label for="base64-quality">Quality: <span id="base64-quality-value">85</span>%</label>
+                            <input type="range" id="base64-quality" min="10" max="100" value="85" class="form-range">
+                            <small class="text-muted">Lower quality = smaller file size</small>
+                        </div>
+                    </div>
+                    <div class="options-grid">
+                        <div class="option-group">
+                            <label for="base64-max-width">Max Width (px):</label>
+                            <input type="number" id="base64-max-width" min="100" max="4000" placeholder="Original" class="form-input">
+                        </div>
+                        <div class="option-group">
+                            <label for="base64-max-height">Max Height (px):</label>
+                            <input type="number" id="base64-max-height" min="100" max="4000" placeholder="Original" class="form-input">
+                        </div>
+                    </div>
+                    <div class="quick-presets">
+                        <strong>Quick Presets:</strong>
+                        <button type="button" class="preset-btn" data-preset-base64="web">Web (800x600, JPEG 80%)</button>
+                        <button type="button" class="preset-btn" data-preset-base64="social">Social (1080x1080, PNG 90%)</button>
+                        <button type="button" class="preset-btn" data-preset-base64="optimized">Optimized (WEBP 70%)</button>
+                    </div>
+                </div>
+
                 <div style="text-align: center;">
                     <button id="base64-btn" type="button" class="btn btn-success" disabled>
                         Remove Background
@@ -114,6 +188,6 @@
         </footer>
     </div>
 
-    <script src="/static/js/app.js?v=12"></script>
+    <script src="/static/js/app.js?v=14"></script>
 </body>
 </html>

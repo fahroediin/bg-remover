@@ -34,6 +34,20 @@ function initializeElements() {
     elements.base64NewFileContainer = document.getElementById('base64-new-file-container');
     elements.base64NewFileBtn = document.getElementById('base64-new-file-btn');
 
+    // Optimization elements
+    elements.previewOptions = document.getElementById('preview-options');
+    elements.base64Options = document.getElementById('base64-options');
+    elements.previewFormat = document.getElementById('preview-format');
+    elements.previewQuality = document.getElementById('preview-quality');
+    elements.previewQualityValue = document.getElementById('preview-quality-value');
+    elements.previewMaxWidth = document.getElementById('preview-max-width');
+    elements.previewMaxHeight = document.getElementById('preview-max-height');
+    elements.base64Format = document.getElementById('base64-format');
+    elements.base64Quality = document.getElementById('base64-quality');
+    elements.base64QualityValue = document.getElementById('base64-quality-value');
+    elements.base64MaxWidth = document.getElementById('base64-max-width');
+    elements.base64MaxHeight = document.getElementById('base64-max-height');
+
     // Debug: Check if all elements are found
     console.log('DEBUG: Elements found:', {
         previewFile: !!elements.previewFile,
@@ -50,7 +64,19 @@ function initializeElements() {
         previewNewFileBtn: !!elements.previewNewFileBtn,
         base64InputContainer: !!elements.base64InputContainer,
         base64NewFileContainer: !!elements.base64NewFileContainer,
-        base64NewFileBtn: !!elements.base64NewFileBtn
+        base64NewFileBtn: !!elements.base64NewFileBtn,
+        previewOptions: !!elements.previewOptions,
+        base64Options: !!elements.base64Options,
+        previewFormat: !!elements.previewFormat,
+        previewQuality: !!elements.previewQuality,
+        previewQualityValue: !!elements.previewQualityValue,
+        previewMaxWidth: !!elements.previewMaxWidth,
+        previewMaxHeight: !!elements.previewMaxHeight,
+        base64Format: !!elements.base64Format,
+        base64Quality: !!elements.base64Quality,
+        base64QualityValue: !!elements.base64QualityValue,
+        base64MaxWidth: !!elements.base64MaxWidth,
+        base64MaxHeight: !!elements.base64MaxHeight
     });
 }
 
@@ -122,12 +148,122 @@ function handleFile(file, type) {
 
     currentFiles[type] = file;
 
-    // Enable button
+    // Enable button and show optimization options
     elements[type + 'Btn'].disabled = false;
 
-    // Show file info
+    // Show optimization options for preview tab
+    if (elements.previewOptions) {
+        elements.previewOptions.style.display = 'block';
+        console.log('DEBUG: Showing preview options');
+    } else {
+        console.log('DEBUG: Preview options element not found');
+    }
+
+    // Show file info with optimization tip
     const fileSize = (file.size / 1024 / 1024).toFixed(2);
-    showResult(type, `Selected: ${file.name} (${fileSize} MB)`, false, 'info');
+    const formatTip = file.type.includes('jpeg') ?
+        '💡 Tip: Converting to PNG with transparency will increase file size. Consider using JPEG or WEBP for smaller files.' :
+        '💡 Tip: Use optimization options below to control output size and quality.';
+
+    showResult(type, `
+        <div class="file-info">
+            <strong>Selected:</strong> ${file.name} (${fileSize} MB)<br>
+            <span class="text-muted">${formatTip}</span>
+        </div>
+    `, false, 'info');
+}
+
+// Get optimization parameters for API
+function getOptimizationParams(type) {
+    const formatElement = elements[type === 'preview' ? 'previewFormat' : 'base64Format'];
+    const qualityElement = elements[type === 'preview' ? 'previewQuality' : 'base64Quality'];
+    const widthElement = elements[type === 'preview' ? 'previewMaxWidth' : 'base64MaxWidth'];
+    const heightElement = elements[type === 'preview' ? 'previewMaxHeight' : 'base64MaxHeight'];
+
+    const params = {
+        format: formatElement ? formatElement.value : 'JPEG',  // Default to JPEG for better compression
+        quality: qualityElement ? parseInt(qualityElement.value) : 80,  // Default to 80% quality
+        max_width: widthElement ? (widthElement.value.trim() ? parseInt(widthElement.value) : null) : null,
+        max_height: heightElement ? (heightElement.value.trim() ? parseInt(heightElement.value) : null) : null
+    };
+
+    console.log(`DEBUG: Optimization params for ${type}:`, params);
+    console.log(`DEBUG: Elements found - Format: ${!!formatElement}, Quality: ${!!qualityElement}, Width: ${!!widthElement}, Height: ${!!heightElement}`);
+
+    return params;
+}
+
+// Apply preset configurations
+function applyPreset(preset, type) {
+    console.log(`DEBUG: Applying preset "${preset}" for ${type}`);
+
+    const formatElement = elements[type === 'preview' ? 'previewFormat' : 'base64Format'];
+    const qualityElement = elements[type === 'preview' ? 'previewQuality' : 'base64Quality'];
+    const qualityValueElement = elements[type === 'preview' ? 'previewQualityValue' : 'base64QualityValue'];
+    const widthElement = elements[type === 'preview' ? 'previewMaxWidth' : 'base64MaxWidth'];
+    const heightElement = elements[type === 'preview' ? 'previewMaxHeight' : 'base64MaxHeight'];
+
+    const presets = {
+        web: { format: 'JPEG', quality: 80, maxWidth: 800, maxHeight: 600 },
+        social: { format: 'PNG', quality: 90, maxWidth: 1080, maxHeight: 1080 },
+        print: { format: 'PNG', quality: 95, maxWidth: null, maxHeight: null },
+        optimized: { format: 'WEBP', quality: 70, maxWidth: 1200, maxHeight: 800 }
+    };
+
+    const config = presets[preset];
+    if (!config) return;
+
+    // Apply values
+    if (formatElement) formatElement.value = config.format;
+    if (qualityElement) qualityElement.value = config.quality;
+    if (qualityValueElement) qualityValueElement.textContent = config.quality;
+    if (widthElement) widthElement.value = config.maxWidth || '';
+    if (heightElement) heightElement.value = config.maxHeight || '';
+
+    // Visual feedback
+    showResult(type, `✅ Applied "${preset}" preset: ${config.format} ${config.quality}% quality`, false, 'success');
+}
+
+// Format file size for display
+function formatFileSize(bytes) {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+}
+
+// Get compression ratio color class
+function getCompressionClass(ratio) {
+    if (ratio >= 50) return 'compression-good';
+    if (ratio >= 20) return 'compression-medium';
+    return 'compression-poor';
+}
+
+// Show compression comparison
+function showCompressionComparison(originalSize, optimizedSize, type) {
+    const compressionRatio = originalSize > 0 ? ((1 - optimizedSize / originalSize) * 100).toFixed(1) : 0;
+    const sizeReduction = originalSize - optimizedSize;
+
+    return `
+        <div class="comparison-info">
+            <h5>📊 File Size Comparison</h5>
+            <div class="comparison-stats">
+                <div class="stat-item">
+                    <span class="stat-label">Original:</span>
+                    <span class="stat-value">${formatFileSize(originalSize)}</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">Optimized:</span>
+                    <span class="stat-value">${formatFileSize(optimizedSize)}</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">Space Saved:</span>
+                    <span class="stat-value ${getCompressionClass(compressionRatio)}">${compressionRatio}% (${formatFileSize(sizeReduction)})</span>
+                </div>
+            </div>
+        </div>
+    `;
 }
 
 // Base64 Input Handler
@@ -231,8 +367,13 @@ function handleBase64DataInput(base64Data, originalFilePath = null) {
         // Store the base64 data
         currentBase64Data = base64Data;
 
-        // Enable button
+        // Enable button and show optimization options
         elements.base64Btn.disabled = false;
+
+        // Show optimization options for base64 tab
+        if (elements.base64Options) {
+            elements.base64Options.style.display = 'block';
+        }
 
         // Show info
         const dataLength = validationResult.cleanData.length;
@@ -249,6 +390,7 @@ function handleBase64DataInput(base64Data, originalFilePath = null) {
                 <p><strong>Estimated Size:</strong> ${estimatedSize} KB</p>
                 <p><strong>Data Length:</strong> ${dataLength.toLocaleString()} characters</p>
                 ${sourceInfo}
+                <p class="text-muted">💡 Use optimization options below to reduce output size</p>
             </div>
         `, false, 'success');
 
@@ -309,13 +451,16 @@ function validateBase64Input(base64Data) {
         };
     }
 
-    // For direct base64 data, only check if it's not empty
+    // For direct base64 data, check if it contains image data pattern
     if (base64Data.length > 0) {
+        // Basic validation for image data patterns
+        const hasImagePattern = base64Data.includes('data:image/') || base64Data.includes('iVBORw0KGgo') || base64Data.includes('/9j/');
+
         return {
             isValid: true,
             error: null,
             solution: null,
-            imageType: 'base64',
+            imageType: hasImagePattern ? 'base64-image' : 'base64',
             cleanData: base64Data,
             decodedSize: base64Data.length
         };
@@ -425,9 +570,15 @@ async function processBase64(event) {
     showLoading('base64', true);
 
     try {
-        // Create JSON payload
-        const payload = { image: currentBase64Data };
-        console.log('DEBUG: Sending request to API');
+        // Get optimization parameters
+        const optimizationParams = getOptimizationParams('base64');
+
+        // Create JSON payload with optimization
+        const payload = {
+            image: currentBase64Data,
+            ...optimizationParams
+        };
+        console.log('DEBUG: Sending request to API with params:', optimizationParams);
 
         const response = await fetch(`${API_BASE}/remove-background-base64`, {
             method: 'POST',
@@ -451,21 +602,37 @@ async function processBase64(event) {
                 // Complete progress before showing result
                 completeProgress('base64');
 
+                // Build compression info if available
+                let compressionInfo = '';
+                if (data.info) {
+                    compressionInfo = showCompressionComparison(
+                        data.info.original_size,
+                        data.info.optimized_size,
+                        'base64'
+                    );
+                }
+
+                const formatInfo = data.info ?
+                    `<p><strong>Format:</strong> ${data.info.format} | <strong>Quality:</strong> ${data.info.quality}%</p>` :
+                    '';
+
                 showResult('base64', `
                     <h3>Background removed successfully!</h3>
+                    ${compressionInfo}
                     <div class="image-box" style="text-align: center; margin: 20px 0;">
                         <div class="image-label" style="margin-bottom: 15px; font-weight: 600; color: #495057;">Result</div>
                         <img src="${imageUrl}" alt="Result" class="image-preview" style="max-width: 100%; max-height: 400px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);">
                     </div>
                     <div class="stats">
-                        <p><strong>Image Size:</strong> ${imageSize} KB</p>
+                        ${formatInfo}
+                        <p><strong>Final Size:</strong> ${imageSize} KB</p>
                         <p><strong>Base64 Length:</strong> ${data.image.length.toLocaleString()} characters</p>
                     </div>
                     <div class="actions" style="text-align: center; margin-top: 20px;">
                         <button type="button" class="btn btn-secondary" data-action="copy" data-text="${data.image.replace(/'/g, "\\'")}">
                             Copy Base64
                         </button>
-                        <button type="button" class="btn btn-primary" data-action="download" data-url="${imageUrl}" data-filename="no-bg-base64.png">
+                        <button type="button" class="btn btn-primary" data-action="download" data-url="${imageUrl}" data-filename="no-bg-base64.${(data.info?.format || 'png').toLowerCase()}">
                             Download Image
                         </button>
                     </div>
@@ -591,7 +758,17 @@ function downloadImage(imageUrl, originalName) {
 async function copyToClipboard(text) {
     try {
         await navigator.clipboard.writeText(text);
-        alert('Base64 data copied to clipboard!');
+        // Success with SweetAlert
+        Swal.fire({
+            icon: 'success',
+            title: 'Copied!',
+            text: 'Base64 data copied to clipboard successfully',
+            timer: 2000,
+            timerProgressBar: true,
+            showConfirmButton: false,
+            position: 'top-end',
+            toast: true
+        });
     } catch (err) {
         // Fallback for older browsers
         const textArea = document.createElement('textarea');
@@ -600,7 +777,17 @@ async function copyToClipboard(text) {
         textArea.select();
         document.execCommand('copy');
         document.body.removeChild(textArea);
-        alert('Base64 data copied to clipboard!');
+        // Success with SweetAlert for fallback
+        Swal.fire({
+            icon: 'success',
+            title: 'Copied!',
+            text: 'Base64 data copied to clipboard successfully',
+            timer: 2000,
+            timerProgressBar: true,
+            showConfirmButton: false,
+            position: 'top-end',
+            toast: true
+        });
     }
 }
 
@@ -728,6 +915,36 @@ function initializeApp() {
         });
     }
 
+    // Quality slider event listeners
+    if (elements.previewQuality) {
+        elements.previewQuality.addEventListener('input', function() {
+            if (elements.previewQualityValue) {
+                elements.previewQualityValue.textContent = this.value;
+            }
+        });
+    }
+
+    if (elements.base64Quality) {
+        elements.base64Quality.addEventListener('input', function() {
+            if (elements.base64QualityValue) {
+                elements.base64QualityValue.textContent = this.value;
+            }
+        });
+    }
+
+    // Preset button event listeners
+    document.addEventListener('click', function(e) {
+        if (e.target.matches('[data-preset]')) {
+            const preset = e.target.getAttribute('data-preset');
+            applyPreset(preset, 'preview');
+        }
+
+        if (e.target.matches('[data-preset-base64]')) {
+            const preset = e.target.getAttribute('data-preset-base64');
+            applyPreset(preset, 'base64');
+        }
+    });
+
     // Prevent form submission on Enter key in textarea
     if (elements.base64Input) {
         elements.base64Input.addEventListener('keydown', function(e) {
@@ -838,6 +1055,11 @@ function showPreviewUpload() {
         elements.previewNewFileContainer.style.display = 'none';
     }
 
+    // Hide optimization options
+    if (elements.previewOptions) {
+        elements.previewOptions.style.display = 'none';
+    }
+
     // Clear result
     if (elements.previewResult) {
         elements.previewResult.className = 'result';
@@ -886,6 +1108,11 @@ function showBase64Input() {
         elements.base64NewFileContainer.style.display = 'none';
     }
 
+    // Hide optimization options
+    if (elements.base64Options) {
+        elements.base64Options.style.display = 'none';
+    }
+
     // Clear result
     if (elements.base64Result) {
         elements.base64Result.className = 'result';
@@ -921,6 +1148,17 @@ async function processPreviewLocal() {
     formData.append('file', currentFiles.preview);
 
     try {
+        // Get optimization parameters
+        const optimizationParams = getOptimizationParams('preview');
+        console.log('DEBUG: Preview optimization params:', optimizationParams);
+
+        // Add optimization parameters to FormData
+        Object.keys(optimizationParams).forEach(key => {
+            if (optimizationParams[key] !== null && optimizationParams[key] !== undefined) {
+                formData.append(key, optimizationParams[key]);
+            }
+        });
+
         const response = await fetch(`${API_BASE}/remove-background-preview`, {
             method: 'POST',
             body: formData
@@ -930,11 +1168,27 @@ async function processPreviewLocal() {
             const blob = await response.blob();
             const imageUrl = URL.createObjectURL(blob);
 
+            // Get optimization info from response headers
+            const originalSize = parseInt(response.headers.get('X-Original-Size') || '0');
+            const optimizedSize = parseInt(response.headers.get('X-Optimized-Size') || '0');
+            const compressionRatio = parseFloat(response.headers.get('X-Compression-Ratio') || '0');
+
             // Complete progress before showing result
             completeProgress('preview');
 
+            // Build compression info
+            let compressionInfo = '';
+            if (originalSize > 0 && optimizedSize > 0) {
+                compressionInfo = showCompressionComparison(originalSize, optimizedSize, 'preview');
+            }
+
+            const formatInfo = optimizationParams.format ?
+                `<p><strong>Format:</strong> ${optimizationParams.format} | <strong>Quality:</strong> ${optimizationParams.quality}%</p>` :
+                '';
+
             showResult('preview', `
                 <h3>Background removed successfully!</h3>
+                ${compressionInfo}
                 <div class="image-comparison">
                     <div class="image-box">
                         <div class="image-label">Original</div>
@@ -944,6 +1198,10 @@ async function processPreviewLocal() {
                         <div class="image-label">Result</div>
                         <img src="${imageUrl}" alt="Result" class="image-preview">
                     </div>
+                </div>
+                <div class="stats">
+                    ${formatInfo}
+                    ${optimizedSize > 0 ? `<p><strong>Final Size:</strong> ${formatFileSize(optimizedSize)}</p>` : ''}
                 </div>
                 <div class="actions">
                     <button type="button" class="btn btn-primary" onclick="downloadImage('${imageUrl}', '${currentFiles.preview.name}')">
@@ -977,9 +1235,15 @@ async function processBase64Local() {
     showLoading('base64', true);
 
     try {
-        // Create JSON payload
-        const payload = { image: currentBase64Data };
-        console.log('DEBUG: Sending request to API');
+        // Get optimization parameters
+        const optimizationParams = getOptimizationParams('base64');
+
+        // Create JSON payload with optimization
+        const payload = {
+            image: currentBase64Data,
+            ...optimizationParams
+        };
+        console.log('DEBUG: Sending request to API with params:', optimizationParams);
 
         const response = await fetch(`${API_BASE}/remove-background-base64`, {
             method: 'POST',
@@ -1003,21 +1267,37 @@ async function processBase64Local() {
                 // Complete progress before showing result
                 completeProgress('base64');
 
+                // Build compression info if available
+                let compressionInfo = '';
+                if (data.info) {
+                    compressionInfo = showCompressionComparison(
+                        data.info.original_size,
+                        data.info.optimized_size,
+                        'base64'
+                    );
+                }
+
+                const formatInfo = data.info ?
+                    `<p><strong>Format:</strong> ${data.info.format} | <strong>Quality:</strong> ${data.info.quality}%</p>` :
+                    '';
+
                 showResult('base64', `
                     <h3>Background removed successfully!</h3>
+                    ${compressionInfo}
                     <div class="image-box" style="text-align: center; margin: 20px 0;">
                         <div class="image-label" style="margin-bottom: 15px; font-weight: 600; color: #495057;">Result</div>
                         <img src="${imageUrl}" alt="Result" class="image-preview" style="max-width: 100%; max-height: 400px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);">
                     </div>
                     <div class="stats">
-                        <p><strong>Image Size:</strong> ${imageSize} KB</p>
+                        ${formatInfo}
+                        <p><strong>Final Size:</strong> ${imageSize} KB</p>
                         <p><strong>Base64 Length:</strong> ${data.image.length.toLocaleString()} characters</p>
                     </div>
                     <div class="actions" style="text-align: center; margin-top: 20px;">
                         <button type="button" class="btn btn-secondary" data-action="copy" data-text="${data.image.replace(/'/g, "\\'")}">
                             Copy Base64
                         </button>
-                        <button type="button" class="btn btn-primary" data-action="download" data-url="${imageUrl}" data-filename="no-bg-base64.png">
+                        <button type="button" class="btn btn-primary" data-action="download" data-url="${imageUrl}" data-filename="no-bg-base64.${(data.info?.format || 'png').toLowerCase()}">
                             Download Image
                         </button>
                     </div>
