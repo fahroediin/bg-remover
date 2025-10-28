@@ -1,321 +1,248 @@
 # Background Remover API
 
-Aplikasi Flask untuk menghapus background dari gambar foto dengan fokus pada objek utama.
+A powerful Flask-based API for removing backgrounds from images with advanced features including rate limiting, comprehensive logging, and multiple input methods.
 
-## ✨ Fitur
+## 🚀 Features
 
-- 🖼️ **Multiple Input Methods**: File upload, preview, & base64 support
-- 🚀 **Rate Limiting**: Perlindungan dari penyalahgunaan API
-- 🔒 **Security**: File validation & CORS protection
-- 🎯 **Background Removal**: Otomatis menggunakan rembg library
-- 📁 **Multiple Formats**: PNG, JPG, JPEG, GIF, BMP, TIFF, WEBP
-- 🧹 **Auto-cleanup**: File otomatis dihapus setelah 1 jam
-- ⚙️ **Environment Config**: Konfigurasi mudah via .env file
-- 🏥 **Health Check**: Monitoring API status
+### Core Functionality
+- **Background Removal**: High-quality background removal using rembg library
+- **Multiple Input Methods**:
+  - File upload (preview and download)
+  - Base64 string input
+  - File path support for local .txt files containing base64 data
+- **Smart Validation**: Comprehensive input validation with PIL verification
+- **Error Handling**: Detailed error messages and solutions
 
-## 🚀 Quick Start
+### User Interface
+- **Clean, Modern Design**: Natural, non-AI-generated appearance
+- **Two Tab Interface**: Preview and Base64 processing
+- **Progress Indicators**: Animated progress bars during processing
+- **Responsive Design**: Works on desktop and mobile devices
+- **Interactive Elements**: Drag & drop file upload, click-to-browse
 
-### 🎯 Automatic Setup (Recommended)
+### Security & Performance
+- **Rate Limiting**: Prevent API abuse with configurable limits
+- **Input Validation**: Multiple layers of validation for security
+- **Logging**: Comprehensive access and error logging
+- **Environment Configuration**: Secure configuration management
 
-**Windows:**
-```bash
-# Run the setup script
-setup.bat
-```
+## 📋 API Endpoints
 
-**Linux/macOS:**
-```bash
-# Make script executable and run
-chmod +x setup.sh
-./setup.sh
-```
+| Method | Endpoint | Description | Rate Limit |
+|--------|----------|-------------|------------|
+| POST | `/remove-background` | Upload file, download result | 10/hour |
+| POST | `/remove-background-preview` | Upload file, preview in browser | 20/hour |
+| POST | `/remove-background-base64` | Process base64 image data | 30/hour |
+| POST | `/read-file` | Read base64 from file path | 15/hour |
+| GET | `/health` | Health check | 100/hour |
+| GET | `/` | API information | 50/hour |
 
-### 🔧 Manual Setup
+## 🛠️ Installation & Setup
 
-**Development:**
-```bash
-# 1. Copy environment template
-cp .env.sample .env
+### Prerequisites
+- Python 3.8+
+- pip package manager
 
-# 2. Install dependencies
-pip install -r requirements.txt
+### Quick Start
 
-# 3. Start development server
-python app.py
+1. **Clone the repository**
+   ```bash
+   git clone <repository-url>
+   cd bg-remover
+   ```
 
-# 4. Test API
-curl http://localhost:5001/
-```
+2. **Install dependencies**
+   ```bash
+   pip install -r requirements.txt
+   ```
 
-**Production:**
-```bash
-# 1. Copy production config
-cp .env.production .env
+3. **Configure environment**
+   ```bash
+   cp .env.sample .env
+   # Edit .env with your configuration
+   ```
 
-# 2. Customize sensitive values in .env
-# 3. Install Redis for rate limiting
-# 4. Start production server
-python app.py
-```
+4. **Run the application**
+   ```bash
+   python app.py
+   ```
 
-## 📡 API Endpoints
+5. **Access the application**
+   - API: http://localhost:5001
+   - Web Interface: http://localhost:5001
 
-### Background Removal
-| Method | Endpoint | Rate Limit | Description |
-|--------|----------|------------|-------------|
-| `POST` | `/remove-background` | 10/minute | Download file hasil |
-| `POST` | `/remove-background-preview` | 15/minute | Preview di browser |
-| `POST` | `/remove-background-base64` | 12/minute | Base64 input/output |
+### Environment Configuration
 
-### System
-| Method | Endpoint | Rate Limit | Description |
-|--------|----------|------------|-------------|
-| `GET` | `/` | 60/minute | API info & rate limits |
-| `GET` | `/health` | 200/minute | Health check |
+Key environment variables (.env file):
 
-### 1. File Upload & Download
-```bash
-curl -X POST -F "file=@your_image.jpg" \
-  http://localhost:5001/remove-background \
-  --output result.png
-```
-
-### 2. Preview in Browser
-```bash
-curl -X POST -F "file=@your_image.jpg" \
-  http://localhost:5001/remove-background-preview \
-  --output preview.png
-```
-
-### 3. Base64 Processing
-```bash
-curl -X POST -H "Content-Type: application/json" \
-  -d '{"image":"base64_encoded_image"}' \
-  http://localhost:5001/remove-background-base64
-```
-
-### 4. API Information
-```bash
-curl http://localhost:5001/
-```
-
-### 5. Health Check
-```bash
-curl http://localhost:5001/health
-```
-
-## Example Usage
-
-### Menggunakan curl (File Upload)
-```bash
-curl -X POST -F "file=@your_image.jpg" http://127.0.0.1:5001/remove-background --output result.png
-```
-
-### Menggunakan curl (Base64)
-```bash
-curl -X POST -H "Content-Type: application/json" \
-  -d '{"image":"base64_encoded_image"}' \
-  http://127.0.0.1:5001/remove-background-base64
-```
-
-### Menggunakan Python requests
-```python
-import requests
-
-# Upload file
-with open('your_image.jpg', 'rb') as f:
-    response = requests.post(
-        'http://127.0.0.1:5001/remove-background',
-        files={'file': f}
-    )
-
-if response.status_code == 200:
-    with open('result.png', 'wb') as f:
-        f.write(response.content)
-    print("Background removed successfully!")
-```
-
-## ⚙️ Konfigurasi
-
-### Environment Variables (.env)
-```bash
-# Flask Configuration
-DEBUG=True
+```env
+# Application
+APP_NAME=Background Remover API
+APP_VERSION=1.0.0
 HOST=0.0.0.0
 PORT=5001
+DEBUG=False
 
 # Rate Limiting
-RATE_LIMIT_REMOVE_BG_PER_MINUTE=10
-RATE_LIMIT_PREVIEW_PER_MINUTE=15
-RATE_LIMIT_BASE64_PER_MINUTE=12
+RATE_LIMIT_STORAGE=redis
+REDIS_URL=redis://localhost:6379/0
 
-# File Upload
-MAX_CONTENT_LENGTH=16777216  # 16MB
+# Logging
+LOG_LEVEL=INFO
+LOG_FILE=bg_remover.log
+
+# Security
+CORS_ORIGINS=*
+MAX_CONTENT_LENGTH=16777216
 ```
 
+## 🎯 Usage Examples
+
+### 1. File Upload with Preview
+```bash
+curl -X POST \
+  http://localhost:5001/remove-background-preview \
+  -H 'Content-Type: multipart/form-data' \
+  -F 'file=@your-image.jpg'
+```
+
+### 2. Base64 Processing
+```bash
+curl -X POST \
+  http://localhost:5001/remove-background-base64 \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "image": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAA..."
+  }'
+```
+
+### 3. File Path Processing (Web Interface)
+1. Open the web interface
+2. Go to Base64 tab
+3. Enter file path: `C:\Users\User\Downloads\encoded-data.txt`
+4. Click "Remove Background"
+
+## 📁 Project Structure
+
+```
+bg-remover/
+├── app.py                 # Main Flask application
+├── requirements.txt       # Python dependencies
+├── .env.sample           # Environment template
+├── .gitignore            # Git ignore rules
+├── README.md             # This file
+├── DOCS.md               # Technical documentation
+├── index.html            # Web interface
+├── static/
+│   ├── css/
+│   │   └── style.css     # Styling
+│   └── js/
+│       └── app.js        # Frontend logic
+├── uploads/              # Temporary upload directory
+├── outputs/              # Generated output directory
+└── logs/                 # Log files directory
+```
+
+## 🔧 Configuration
+
 ### Rate Limiting
-API dilindungi dengan rate limiting per endpoint:
+- **Preview**: 20 requests per hour
+- **Base64**: 30 requests per hour
+- **File Download**: 10 requests per hour
+- **File Reading**: 15 requests per hour
 
-- **Background Removal**: 10 requests/menit
-- **Preview**: 15 requests/menit
-- **Base64**: 12 requests/menit
-- **Health**: 200 requests/menit
-- **Info**: 60 requests/menit
+### Supported Image Formats
+- PNG, JPG/JPEG, GIF, BMP, TIFF, WEBP
+- Maximum file size: 16MB
+- Base64 strings with data URI scheme
 
-Jika limit ter-exceed:
+### File Path Support
+- Windows: `C:\Users\User\Downloads\encoded-data.txt`
+- Linux/Mac: `/home/user/encoded-data.txt`
+- Only .txt files are allowed for security
+
+## 🚨 Error Handling
+
+The API provides detailed error messages:
+
 ```json
 {
-  "error": "Rate limit exceeded",
-  "message": "Too many requests. 10 per minute",
-  "retry_after": "45"
+  "error": "Invalid image file: Unsupported image format",
+  "solution": "Please use a supported image format: PNG, JPG, GIF, BMP, TIFF, WEBP"
 }
 ```
 
-## 📁 Supported Formats
+Common error types:
+- File format validation
+- Size limit validation
+- Base64 format validation
+- Network connectivity issues
 
-### Input Formats
-- ✅ PNG
-- ✅ JPG/JPEG
-- ✅ GIF
-- ✅ BMP
-- ✅ TIFF
-- ✅ WEBP
+## 📊 Logging
 
-### Output Format
-- 📄 **Format**: PNG dengan transparansi
-- 🎨 **Background**: Transparan
-- 🖼️ **Object**: Dipertahankan dengan kualitas tinggi
+Comprehensive logging system tracks:
+- API access with IP and User-Agent
+- Processing success/failure rates
+- Error details and resolutions
+- Performance metrics
 
-## 🧪 Testing & Frontend
-
-### 🌐 Simple Web Frontend
-Buka `test.html` di browser untuk testing API dengan **frontend yang sederhana**:
-
-**Features:**
-- 📱 **Clean & minimal** design
-- 🖱️ **Drag & drop** file upload
-- 👁️ **2 Tab Navigation**: Preview & Base64
-- ⏳ **Simple loading** indicators
-- 🔁 **Side-by-side comparison** (original vs result)
-- 📋 **Copy to clipboard** untuk base64 results
-- 📥 **Direct download** dari browser
-
-### Tab Navigation:
-1. **👁️ Preview**: Upload & preview hasil di browser
-2. **🔤 Base64**: Upload & dapatkan hasil dalam format base64
-
-### API Testing (cURL)
-```bash
-# Test health endpoint
-curl http://localhost:5001/health
-
-# Test file upload
-curl -X POST -F "file=@test.jpg" \
-  http://localhost:5001/remove-background-preview
-
-# Test rate limiting
-for i in {1..15}; do
-  curl -X POST -F "file=@test.jpg" \
-    http://localhost:5001/remove-background
-  echo "Request $i"
-done
+Log format:
+```
+2025-10-28 11:13:15 - INFO - API_ACCESS | 2025-10-28 11:13:15 | GET index | IP: 127.0.0.1 | UA: Mozilla/5.0...
+2025-10-28 11:13:15 - INFO - API_SUCCESS | 2025-10-28 11:13:15 | POST base64 | IP: 127.0.0.1 | Status: 200
 ```
 
-## 🚀 Production Deployment
+## 🔒 Security Features
 
-Lihat `DEPLOYMENT.md` untuk lengkapnya:
+- **Input Validation**: Multiple layers of validation
+- **File Type Restrictions**: Only image files allowed
+- **Path Validation**: Secure file path handling
+- **Size Limits**: Configurable file size restrictions
+- **Rate Limiting**: Prevents API abuse
+- **CORS Configuration**: Configurable cross-origin policies
 
-```bash
-# Copy production config
-cp .env.production .env
+## 🐳 Docker Support
 
-# Install Redis untuk rate limiting storage
-pip install redis
+Create a `Dockerfile` for containerized deployment:
 
-# Start production server
-python app.py
+```dockerfile
+FROM python:3.9-slim
+WORKDIR /app
+COPY requirements.txt .
+RUN pip install -r requirements.txt
+COPY . .
+EXPOSE 5001
+CMD ["python", "app.py"]
 ```
 
-## 📝 Notes
+## 🤝 Contributing
 
-- 🧹 File otomatis dihapus setelah 1 jam
-- ⏱️ Processing time tergantung ukuran gambar
-- 🔒 Max file size: 16MB (configurable)
-- 🌐 CORS enabled untuk all origins (configure di production)
-- 📊 Rate limiting menggunakan memory storage (Redis untuk production)
-- 🏥 Health check tersedia untuk monitoring
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Add tests if applicable
+5. Submit a pull request
 
-## 📄 Files
+## 📄 License
 
-### Core Application
-- `app.py` - Main Flask application
-- `requirements.txt` - Python dependencies
+This project is licensed under the MIT License - see the LICENSE file for details.
 
-### Configuration
-- `.env.sample` - **Environment template** (copy to .env)
-- `.env.production` - Production configuration template
-- `.env` - **Your local configuration** (not in git)
+## 🆘 Support
 
-### Setup & Testing
-- `setup.sh` - Linux/macOS setup script
-- `setup.bat` - Windows setup script
-- `test.html` - **Modern web frontend** with drag & drop, tabs, and API monitoring
+For issues and questions:
+- Check the logs for detailed error information
+- Review the technical documentation (DOCS.md)
+- Verify environment configuration
+- Ensure all dependencies are installed
 
-### Documentation
-- `README.md` - This file
-- `DEPLOYMENT.md` - Production deployment guide
-- `.gitignore` - Git ignore rules
+## 🔄 Updates
+
+- **v1.0.0**: Initial release with core functionality
+- Added progress bars and improved UI
+- Enhanced base64 processing without original image display
+- Fixed auto-refresh issues
+- Added comprehensive file path support
 
 ---
 
-## 🔧 Troubleshooting
-
-**Rate limit tidak berfungsi?**
-1. Restart server setelah ubah .env
-2. Check Flask-Limiter installation
-3. Verify environment variables
-
-**File upload terlalu besar?**
-1. Adjust `MAX_CONTENT_LENGTH` di .env
-2. Check client upload limits
-
-**CORS issues?**
-1. Set `CORS_ORIGINS` ke domain yang benar
-2. Check preflight OPTIONS requests
-
-## 🔒 Security Best Practices
-
-### Environment Variables
-- ✅ **Use `.env.sample`** sebagai template
-- ✅ **Never commit `.env`** ke version control
-- ✅ **Use different values** untuk development & production
-- ✅ **Secure sensitive data** seperti API keys dan passwords
-
-### File Security
-- ✅ **`.gitignore`** sudah dikonfigurasi dengan aman
-- ✅ **Upload validation** untuk file types & sizes
-- ✅ **Auto-cleanup** untuk temporary files
-- ✅ **Rate limiting** untuk mencegah abuse
-
-### Production Security
-- ✅ **Set `DEBUG=False`** di production
-- ✅ **Use Redis** untuk rate limiting storage
-- ✅ **Configure `CORS_ORIGINS`** ke domain spesifik
-- ✅ **Monitor API usage** dan rate limit violations
-- ✅ **Use HTTPS** di production (nginx/apache reverse proxy)
-
-### Recommended File Structure
-```
-bg-remover/
-├── .env.sample          # Template (safe to commit)
-├── .env.production      # Production template (safe to commit)
-├── .env                 # Your config (NEVER commit)
-├── .gitignore           # Security rules
-├── setup.sh/.bat        # Setup scripts
-├── app.py               # Main application
-├── requirements.txt     # Dependencies
-├── test.html           # Testing interface
-├── uploads/            # Temporary uploads (auto-cleaned)
-├── outputs/            # Temporary outputs (auto-cleaned)
-└── DEPLOYMENT.md       # Production guide
-```
+**Built with ❤️ using Flask, rembg, and modern web technologies**
