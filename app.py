@@ -163,6 +163,13 @@ def ratelimit_handler(e):
 @limiter.limit(f"{RATE_LIMIT_INFO_PER_MINUTE} per minute")
 @log_api_access
 def index():
+    logger.info("WEB_PAGE_REQUEST | Background Remover web page accessed")
+    return send_file('index.html')
+
+@app.route('/api')
+@limiter.limit(f"{RATE_LIMIT_INFO_PER_MINUTE} per minute")
+@log_api_access
+def api_info():
     logger.info("API_INFO_REQUEST | Background Remover API info accessed")
     return jsonify({
         'message': 'Background Remover API',
@@ -180,7 +187,8 @@ def index():
             'remove_background': '/remove-background (POST) - Download hasil sebagai file',
             'remove_background_preview': '/remove-background-preview (POST) - Preview hasil di browser',
             'remove_background_base64': '/remove-background-base64 (POST) - Input/output base64',
-            'health': '/health (GET)'
+            'health': '/health (GET)',
+            'info': '/api (GET)'
         }
     })
 

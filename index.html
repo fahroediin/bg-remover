@@ -14,21 +14,18 @@
         </header>
 
         <div class="tabs">
-            <button class="tab active" onclick="switchTab('preview')">Preview</button>
-            <button class="tab" onclick="switchTab('base64')">Base64</button>
+            <button class="tab active" data-tab="preview">Preview</button>
+            <button class="tab" data-tab="base64">Base64</button>
         </div>
 
         <!-- Preview Tab -->
         <div id="preview-tab" class="tab-content active">
             <form id="preview-form" onsubmit="return false;">
-                <div class="upload-area" id="preview-upload-area"
-                     ondrop="window.handleDrop(event, 'preview')"
-                     ondragover="window.handleDragOver(event)"
-                     ondragleave="window.handleDragLeave(event)">
+                <div class="upload-area" id="preview-upload-area">
                     <div class="upload-icon">📷</div>
                     <div class="upload-text">Drop your image here or click to browse</div>
                     <div class="upload-hint">PNG, JPG, GIF, BMP, TIFF, WEBP (Max 16MB)</div>
-                    <input type="file" id="preview-file" accept="image/*" onchange="window.handleFileSelect(event, 'preview')">
+                    <input type="file" id="preview-file" accept="image/*">
                 </div>
 
                 <div style="text-align: center;">
@@ -84,6 +81,6 @@
         </footer>
     </div>
 
-    <script src="/static/js/app.js"></script>
+    <script src="/static/js/app.js?v=4"></script>
 </body>
 </html>

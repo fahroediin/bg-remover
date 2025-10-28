@@ -13,6 +13,7 @@ const elements = {};
 
 // Initialize DOM elements
 function initializeElements() {
+    console.log('DEBUG: Initializing DOM elements...');
     elements.previewFile = document.getElementById('preview-file');
     elements.base64Input = document.getElementById('base64-input');
     elements.previewBtn = document.getElementById('preview-btn');
@@ -22,6 +23,19 @@ function initializeElements() {
     elements.previewResult = document.getElementById('preview-result');
     elements.base64Result = document.getElementById('base64-result');
     elements.appVersion = document.getElementById('app-version');
+
+    // Debug: Check if all elements are found
+    console.log('DEBUG: Elements found:', {
+        previewFile: !!elements.previewFile,
+        base64Input: !!elements.base64Input,
+        previewBtn: !!elements.previewBtn,
+        base64Btn: !!elements.base64Btn,
+        previewLoading: !!elements.previewLoading,
+        base64Loading: !!elements.base64Loading,
+        previewResult: !!elements.previewResult,
+        base64Result: !!elements.base64Result,
+        appVersion: !!elements.appVersion
+    });
 }
 
 // Tab Management
@@ -412,28 +426,63 @@ function initializeApp() {
             e.preventDefault();
             e.stopPropagation();
 
-            const tabName = e.target.textContent.toLowerCase();
+            const tabName = e.target.getAttribute('data-tab');
             switchTab(tabName, e.target);
         });
     });
 
     // Upload area click handlers
     const previewUploadArea = document.getElementById('preview-upload-area');
+    console.log('DEBUG: Upload area found:', !!previewUploadArea);
     if (previewUploadArea) {
+        // Add multiple event listeners to ensure it works
         previewUploadArea.addEventListener('click', function(e) {
-            console.log('DEBUG: Preview upload area clicked');
+            console.log('DEBUG: Preview upload area clicked!');
             e.preventDefault();
             e.stopPropagation();
-            document.getElementById('preview-file').click();
+
+            const fileInput = document.getElementById('preview-file');
+            console.log('DEBUG: File input found:', !!fileInput);
+            if (fileInput) {
+                console.log('DEBUG: Triggering file input click...');
+                try {
+                    fileInput.click();
+                    console.log('DEBUG: File input click completed');
+                } catch (error) {
+                    console.log('DEBUG: Error clicking file input:', error);
+                }
+            } else {
+                console.log('DEBUG: ERROR - File input not found!');
+            }
         });
+
+        // Also try onclick as backup
+        previewUploadArea.onclick = function(e) {
+            console.log('DEBUG: Backup onclick triggered');
+            e.preventDefault();
+            e.stopPropagation();
+            const fileInput = document.getElementById('preview-file');
+            if (fileInput) {
+                fileInput.click();
+            }
+        };
+
+        console.log('DEBUG: Upload area event listeners attached');
+    } else {
+        console.log('DEBUG: ERROR - Upload area not found!');
     }
 
     // File input handlers
     if (elements.previewFile) {
         elements.previewFile.addEventListener('change', function(e) {
-            console.log('DEBUG: Preview file selected');
+            console.log('DEBUG: Preview file selected, files:', e.target.files);
             e.preventDefault();
-            handleFile(e, 'preview');
+            if (e.target.files && e.target.files.length > 0) {
+                console.log('DEBUG: Processing file:', e.target.files[0].name);
+                handleFile(e.target.files[0], 'preview');
+            } else {
+                console.log('DEBUG: No files selected');
+            }
         });
     }
 
@@ -529,6 +578,21 @@ function initializeApp() {
                 downloadImage(url, filename);
             }
         }
+    });
+
+    // Comprehensive form submission prevention at document level
+    document.addEventListener('submit', function(e) {
+        console.log('DEBUG: Document-level submit prevented');
+        e.preventDefault();
+        e.stopPropagation();
+        e.stopImmediatePropagation();
+        return false;
+    });
+
+    // Prevent any navigation or page reload attempts
+    window.addEventListener('beforeunload', function(e) {
+        console.log('DEBUG: Beforeunload event detected');
+        // Don't show confirmation dialog, just log it
     });
 
     console.log('Background Remover App initialized successfully');
