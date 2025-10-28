@@ -24,6 +24,11 @@ function initializeElements() {
     elements.base64Result = document.getElementById('base64-result');
     elements.appVersion = document.getElementById('app-version');
 
+    // New preview elements
+    elements.previewUploadContainer = document.getElementById('preview-upload-container');
+    elements.previewNewFileContainer = document.getElementById('preview-new-file-container');
+    elements.previewNewFileBtn = document.getElementById('preview-new-file-btn');
+
     // Debug: Check if all elements are found
     console.log('DEBUG: Elements found:', {
         previewFile: !!elements.previewFile,
@@ -34,7 +39,10 @@ function initializeElements() {
         base64Loading: !!elements.base64Loading,
         previewResult: !!elements.previewResult,
         base64Result: !!elements.base64Result,
-        appVersion: !!elements.appVersion
+        appVersion: !!elements.appVersion,
+        previewUploadContainer: !!elements.previewUploadContainer,
+        previewNewFileContainer: !!elements.previewNewFileContainer,
+        previewNewFileBtn: !!elements.previewNewFileBtn
     });
 }
 
@@ -676,6 +684,17 @@ function initializeApp() {
         });
     }
 
+    // Process other file button event listener
+    if (elements.previewNewFileBtn) {
+        elements.previewNewFileBtn.addEventListener('click', function(e) {
+            console.log('DEBUG: Process other file button clicked');
+            e.preventDefault();
+            e.stopPropagation();
+            e.stopImmediatePropagation();
+            showPreviewUpload();
+        });
+    }
+
     // Base64 input event listeners
     if (elements.base64Input) {
         elements.base64Input.addEventListener('input', handleBase64Input);
@@ -769,6 +788,54 @@ function initializeApp() {
 
 // No more global functions - using event listeners only
 
+// Preview UI State Management Functions
+function showPreviewResult() {
+    console.log('DEBUG: Showing preview result, hiding upload area');
+
+    // Hide upload container
+    if (elements.previewUploadContainer) {
+        elements.previewUploadContainer.style.display = 'none';
+    }
+
+    // Show "Process other file" button
+    if (elements.previewNewFileContainer) {
+        elements.previewNewFileContainer.style.display = 'block';
+    }
+}
+
+function showPreviewUpload() {
+    console.log('DEBUG: Showing preview upload, hiding result');
+
+    // Show upload container
+    if (elements.previewUploadContainer) {
+        elements.previewUploadContainer.style.display = 'block';
+    }
+
+    // Hide "Process other file" button
+    if (elements.previewNewFileContainer) {
+        elements.previewNewFileContainer.style.display = 'none';
+    }
+
+    // Clear result
+    if (elements.previewResult) {
+        elements.previewResult.className = 'result';
+        elements.previewResult.innerHTML = '';
+    }
+
+    // Reset file input
+    if (elements.previewFile) {
+        elements.previewFile.value = '';
+    }
+
+    // Reset button state
+    if (elements.previewBtn) {
+        elements.previewBtn.disabled = true;
+    }
+
+    // Clear current file
+    currentFiles.preview = null;
+}
+
 // Create local versions for internal calls
 async function processPreviewLocal() {
     console.log('DEBUG: processPreviewLocal called');
@@ -814,6 +881,9 @@ async function processPreviewLocal() {
                     </button>
                 </div>
             `, false);
+
+            // Show result and hide upload area
+            showPreviewResult();
         } else {
             const errorText = await response.text();
             showResult('preview', `Error: ${errorText}`, true);

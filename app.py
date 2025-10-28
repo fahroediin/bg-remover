@@ -147,6 +147,11 @@ os.makedirs(OUTPUT_FOLDER, exist_ok=True)
 def serve_static(filename):
     return send_from_directory('static', filename)
 
+# Favicon route
+@app.route('/favicon.ico')
+def favicon():
+    return send_from_directory('static', 'favicon.png', mimetype='image/png')
+
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 

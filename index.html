@@ -4,6 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Background Remover</title>
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="/static/favicon.png">
+    <link rel="shortcut icon" type="image/png" href="/static/favicon.png">
+    <link rel="apple-touch-icon" href="/static/favicon.png">
+    <!-- Styles -->
     <link rel="stylesheet" href="/static/css/style.css">
 </head>
 <body>
@@ -21,16 +26,26 @@
         <!-- Preview Tab -->
         <div id="preview-tab" class="tab-content active">
             <form id="preview-form" onsubmit="return false;">
-                <div class="upload-area" id="preview-upload-area" onclick="document.getElementById('preview-file').click()">
-                    <div class="upload-icon">📷</div>
-                    <div class="upload-text">Drop your image here or click to browse</div>
-                    <div class="upload-hint">PNG, JPG, GIF, BMP, TIFF, WEBP (Max 16MB)</div>
-                    <input type="file" id="preview-file" accept="image/*" style="display: none;">
+                <!-- Upload Area -->
+                <div id="preview-upload-container">
+                    <div class="upload-area" id="preview-upload-area" onclick="document.getElementById('preview-file').click()">
+                        <div class="upload-icon">📷</div>
+                        <div class="upload-text">Drop your image here or click to browse</div>
+                        <div class="upload-hint">PNG, JPG, GIF, BMP, TIFF, WEBP (Max 16MB)</div>
+                        <input type="file" id="preview-file" accept="image/*" style="display: none;">
+                    </div>
+
+                    <div style="text-align: center;">
+                        <button id="preview-btn" type="button" class="btn btn-primary" disabled>
+                            Remove Background
+                        </button>
+                    </div>
                 </div>
 
-                <div style="text-align: center;">
-                    <button id="preview-btn" type="button" class="btn btn-primary" disabled>
-                        Remove Background
+                <!-- Process Other File Button (Hidden by default) -->
+                <div id="preview-new-file-container" style="display: none; text-align: center; margin: 30px 0;">
+                    <button id="preview-new-file-btn" type="button" class="btn btn-secondary">
+                        📁 Process Other File
                     </button>
                 </div>
 
@@ -89,6 +104,6 @@
         </footer>
     </div>
 
-    <script src="/static/js/app.js?v=9"></script>
+    <script src="/static/js/app.js?v=11"></script>
 </body>
 </html>
