@@ -5,6 +5,152 @@
     box-sizing: border-box;
 }
 
+/* Queue Status Styles */
+.queue-status {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 15px;
+    border-radius: 12px;
+    margin: 15px 0;
+    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.02); }
+    100% { transform: scale(1); }
+}
+
+.queue-info h4 {
+    margin-bottom: 10px;
+    font-size: 1.1rem;
+}
+
+.queue-stats {
+    display: flex;
+    gap: 20px;
+    margin-bottom: 10px;
+    flex-wrap: wrap;
+}
+
+.queue-stats .stat-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    background: rgba(255, 255, 255, 0.2);
+    padding: 8px 15px;
+    border-radius: 8px;
+    min-width: 80px;
+}
+
+.queue-stats .stat-label {
+    font-size: 0.8rem;
+    opacity: 0.9;
+    margin-bottom: 2px;
+}
+
+.queue-stats .stat-value {
+    font-size: 1.2rem;
+    font-weight: bold;
+}
+
+.queue-message {
+    font-size: 0.9rem;
+    opacity: 0.9;
+    font-style: italic;
+}
+
+/* Queue Processing Styles */
+.queue-processing {
+    background: #f8f9fa;
+    border: 2px solid #e9ecef;
+    border-radius: 12px;
+    padding: 25px;
+    margin: 20px 0;
+    text-align: center;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+.queue-processing h3 {
+    color: #2c3e50;
+    margin-bottom: 20px;
+    font-size: 1.3rem;
+}
+
+.job-info {
+    background: white;
+    padding: 20px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+    border-left: 4px solid #007bff;
+}
+
+.job-info p {
+    margin-bottom: 10px;
+    color: #495057;
+}
+
+.job-info strong {
+    color: #2c3e50;
+}
+
+#current-job-id {
+    font-family: 'Courier New', monospace;
+    background: #f8f9fa;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 0.9rem;
+}
+
+#job-status {
+    color: #007bff;
+    font-weight: 600;
+}
+
+.progress-bar {
+    width: 100%;
+    height: 20px;
+    background: #e9ecef;
+    border-radius: 10px;
+    overflow: hidden;
+    margin: 10px 0;
+}
+
+.progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #28a745, #20c997);
+    transition: width 0.3s ease;
+    border-radius: 10px;
+}
+
+#job-message {
+    color: #6c757d;
+    font-style: italic;
+    margin-top: 10px;
+}
+
+/* Queue Actions */
+#queue-actions {
+    display: flex;
+    gap: 15px;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+#queue-actions .btn {
+    min-width: 140px;
+}
+
+/* Tab specific queue styling */
+.tab[data-tab="queue"] {
+    background: linear-gradient(135deg, #28a745, #20c997);
+}
+
+.tab[data-tab="queue"]:hover {
+    background: linear-gradient(135deg, #218838, #1ea085);
+}
+
 /* Optimization Options Styles */
 .optimization-options {
     background: #ffffff;

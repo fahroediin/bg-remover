@@ -18,6 +18,28 @@
         <header>
             <h1>Background Remover</h1>
             <p class="subtitle">Remove backgrounds from your images instantly</p>
+
+            <!-- Queue Status Display -->
+            <div id="queue-status" class="queue-status" style="display: none;">
+                <div class="queue-info">
+                    <h4>🔄 Queue Status</h4>
+                    <div class="queue-stats">
+                        <div class="stat-item">
+                            <span class="stat-label">Queue:</span>
+                            <span id="queue-length" class="stat-value">0</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">Processing:</span>
+                            <span id="active-jobs" class="stat-value">0</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">Max Concurrent:</span>
+                            <span id="max-concurrent" class="stat-value">3</span>
+                        </div>
+                    </div>
+                    <div id="queue-message" class="queue-message"></div>
+                </div>
+            </div>
         </header>
 
         <div class="tabs">
@@ -96,6 +118,25 @@
                 </div>
 
                 <div id="preview-result" class="result"></div>
+
+            <!-- Queue Processing Status (Hidden by default) -->
+            <div id="preview-queue-status" class="queue-processing" style="display: none;">
+                <h3>🔄 Processing Your Image</h3>
+                <div class="job-info">
+                    <p><strong>Job ID:</strong> <span id="preview-job-id"></span></p>
+                    <p><strong>Status:</strong> <span id="preview-job-status">Queued</span></p>
+                    <p><strong>Queue Position:</strong> <span id="preview-queue-position">1</span></p>
+                    <p><strong>Progress:</strong></p>
+                    <div class="progress-bar">
+                        <div id="preview-job-progress-bar" class="progress-fill" style="width: 0%"></div>
+                    </div>
+                    <p id="preview-job-message">Your job has been added to the queue...</p>
+                </div>
+                <div id="preview-queue-actions" style="text-align: center; margin-top: 20px;">
+                    <button id="preview-check-status-btn" class="btn btn-secondary">Check Status</button>
+                    <button id="preview-download-result-btn" class="btn btn-primary" style="display: none;">Download Result</button>
+                </div>
+            </div>
             </form>
         </div>
 
@@ -178,6 +219,25 @@
             </div>
 
             <div id="base64-result" class="result"></div>
+
+            <!-- Queue Processing Status (Hidden by default) -->
+            <div id="base64-queue-status" class="queue-processing" style="display: none;">
+                <h3>🔄 Processing Your Image</h3>
+                <div class="job-info">
+                    <p><strong>Job ID:</strong> <span id="base64-job-id"></span></p>
+                    <p><strong>Status:</strong> <span id="base64-job-status">Queued</span></p>
+                    <p><strong>Queue Position:</strong> <span id="base64-queue-position">1</span></p>
+                    <p><strong>Progress:</strong></p>
+                    <div class="progress-bar">
+                        <div id="base64-job-progress-bar" class="progress-fill" style="width: 0%"></div>
+                    </div>
+                    <p id="base64-job-message">Your job has been added to the queue...</p>
+                </div>
+                <div id="base64-queue-actions" style="text-align: center; margin-top: 20px;">
+                    <button id="base64-check-status-btn" class="btn btn-secondary">Check Status</button>
+                    <button id="base64-download-result-btn" class="btn btn-primary" style="display: none;">Download Result</button>
+                </div>
+            </div>
         </div>
 
         <!-- Footer -->

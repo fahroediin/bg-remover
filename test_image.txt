@@ -1,0 +1,1 @@
+This would be a test image file in binary format

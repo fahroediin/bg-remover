@@ -1,9 +1,8 @@
 // Background Remover API - Frontend JavaScript
 
 // Configuration
-// Use the same domain and protocol as the current page
-const API_BASE = window.location.protocol + '//' + window.location.hostname +
-                 (window.location.port ? ':' + window.location.port : '');
+// Force use port 5001 for development
+const API_BASE = window.location.protocol + '//' + window.location.hostname + ':5001';
 
 // Debug mode - disable in production
 const DEBUG_MODE = window.location.hostname === 'localhost' ||
@@ -18,9 +17,16 @@ function debugLog(...args) {
 }
 let currentFiles = {
     preview: null,
-    base64: null
+    base64: null,
+    queue: null
 };
 let currentBase64Data = null;
+let currentJobId = null;
+let queueStatusInterval = null;
+let currentPreviewJobId = null;
+let currentBase64JobId = null;
+let previewQueueInterval = null;
+let base64QueueInterval = null;
 
 // DOM Elements
 const elements = {};
@@ -48,6 +54,54 @@ function initializeElements() {
     elements.base64InputContainer = document.getElementById('base64-input-container');
     elements.base64NewFileContainer = document.getElementById('base64-new-file-container');
     elements.base64NewFileBtn = document.getElementById('base64-new-file-btn');
+
+    // Preview queue elements
+    elements.previewQueueStatus = document.getElementById('preview-queue-status');
+    elements.previewJobId = document.getElementById('preview-job-id');
+    elements.previewJobStatus = document.getElementById('preview-job-status');
+    elements.previewQueuePosition = document.getElementById('preview-queue-position');
+    elements.previewJobProgressBar = document.getElementById('preview-job-progress-bar');
+    elements.previewJobMessage = document.getElementById('preview-job-message');
+    elements.previewCheckStatusBtn = document.getElementById('preview-check-status-btn');
+    elements.previewDownloadResultBtn = document.getElementById('preview-download-result-btn');
+
+    // Base64 queue elements
+    elements.base64QueueStatus = document.getElementById('base64-queue-status');
+    elements.base64JobId = document.getElementById('base64-job-id');
+    elements.base64JobStatus = document.getElementById('base64-job-status');
+    elements.base64QueuePosition = document.getElementById('base64-queue-position');
+    elements.base64JobProgressBar = document.getElementById('base64-job-progress-bar');
+    elements.base64JobMessage = document.getElementById('base64-job-message');
+    elements.base64CheckStatusBtn = document.getElementById('base64-check-status-btn');
+    elements.base64DownloadResultBtn = document.getElementById('base64-download-result-btn');
+
+    // Queue elements
+    elements.queueFile = document.getElementById('queue-file');
+    elements.queueBtn = document.getElementById('queue-btn');
+    elements.queueUploadContainer = document.getElementById('queue-upload-container');
+    elements.queueNewFileContainer = document.getElementById('queue-new-file-container');
+    elements.queueNewFileBtn = document.getElementById('queue-new-file-btn');
+    elements.queueOptions = document.getElementById('queue-options');
+    elements.queueFormat = document.getElementById('queue-format');
+    elements.queueQuality = document.getElementById('queue-quality');
+    elements.queueQualityValue = document.getElementById('queue-quality-value');
+    elements.queueMaxWidth = document.getElementById('queue-max-width');
+    elements.queueMaxHeight = document.getElementById('queue-max-height');
+    elements.queueProcessingStatus = document.getElementById('queue-processing-status');
+    elements.currentJobId = document.getElementById('current-job-id');
+    elements.jobStatus = document.getElementById('job-status');
+    elements.jobProgressBar = document.getElementById('job-progress-bar');
+    elements.jobMessage = document.getElementById('job-message');
+    elements.checkStatusBtn = document.getElementById('check-status-btn');
+    elements.downloadResultBtn = document.getElementById('download-result-btn');
+    elements.queueResult = document.getElementById('queue-result');
+
+    // Queue status elements
+    elements.queueStatusDiv = document.getElementById('queue-status');
+    elements.queueLength = document.getElementById('queue-length');
+    elements.activeJobs = document.getElementById('active-jobs');
+    elements.maxConcurrent = document.getElementById('max-concurrent');
+    elements.queueMessage = document.getElementById('queue-message');
 
     // Optimization elements
     elements.previewOptions = document.getElementById('preview-options');
@@ -191,10 +245,24 @@ function handleFile(file, type) {
 
 // Get optimization parameters for API
 function getOptimizationParams(type) {
-    const formatElement = elements[type === 'preview' ? 'previewFormat' : 'base64Format'];
-    const qualityElement = elements[type === 'preview' ? 'previewQuality' : 'base64Quality'];
-    const widthElement = elements[type === 'preview' ? 'previewMaxWidth' : 'base64MaxWidth'];
-    const heightElement = elements[type === 'preview' ? 'previewMaxHeight' : 'base64MaxHeight'];
+    let formatElement, qualityElement, widthElement, heightElement;
+
+    if (type === 'preview') {
+        formatElement = elements.previewFormat;
+        qualityElement = elements.previewQuality;
+        widthElement = elements.previewMaxWidth;
+        heightElement = elements.previewMaxHeight;
+    } else if (type === 'base64') {
+        formatElement = elements.base64Format;
+        qualityElement = elements.base64Quality;
+        widthElement = elements.base64MaxWidth;
+        heightElement = elements.base64MaxHeight;
+    } else if (type === 'queue') {
+        formatElement = elements.queueFormat;
+        qualityElement = elements.queueQuality;
+        widthElement = elements.queueMaxWidth;
+        heightElement = elements.queueMaxHeight;
+    }
 
     const params = {
         format: formatElement ? formatElement.value : 'JPEG',  // Default to JPEG for better compression
@@ -513,13 +581,21 @@ function showLoading(type, show = true) {
     const btnElement = elements[type + 'Btn'];
 
     if (show) {
-        loadingElement.classList.add('show');
-        btnElement.disabled = true;
+        if (loadingElement) {
+            loadingElement.classList.add('show');
+        }
+        if (btnElement) {
+            btnElement.disabled = true;
+        }
         // Start progress animation
         animateProgress(type);
     } else {
-        loadingElement.classList.remove('show');
-        btnElement.disabled = false;
+        if (loadingElement) {
+            loadingElement.classList.remove('show');
+        }
+        if (btnElement) {
+            btnElement.disabled = false;
+        }
         // Reset progress bar
         resetProgress(type);
     }
@@ -610,7 +686,12 @@ async function processBase64(event) {
             const data = await response.json();
             debugLog('DEBUG: API response data:', data);
 
-            if (data.success) {
+            if (data.job_id) {
+                // This is a queued response
+                showQueueStatusForTab(tab === 'base64' ? 'base64' : 'preview', data.job_id, data.queue_position);
+                startQueuePollingForTab(tab === 'base64' ? 'base64' : 'preview', data.job_id);
+            } else if (data.success) {
+                // This is a direct processing result
                 const imageUrl = `data:${data.mimetype};base64,${data.image}`;
                 const imageSize = Math.round(data.image.length * 0.75 / 1024);
 
@@ -807,6 +888,550 @@ async function copyToClipboard(text) {
     }
 }
 
+// Queue Status Functions
+async function loadQueueStatus() {
+    try {
+        const response = await fetch(`${API_BASE}/queue/status`);
+        if (response.ok) {
+            const data = await response.json();
+            updateQueueStatusDisplay(data);
+        }
+    } catch (error) {
+        debugLog('Failed to load queue status:', error);
+    }
+}
+
+function updateQueueStatusDisplay(data) {
+    if (!elements.queueStatusDiv) return;
+
+    // Show queue status if there are active jobs or queue
+    if (data.queue_length > 0 || data.active_jobs > 0) {
+        elements.queueStatusDiv.style.display = 'block';
+        elements.queueLength.textContent = data.queue_length;
+        elements.activeJobs.textContent = data.active_jobs;
+        elements.maxConcurrent.textContent = data.max_concurrent_jobs;
+
+        // Set message based on queue status
+        if (data.queue_length > 10) {
+            elements.queueMessage.textContent = '⚠️ Queue is busy - consider processing later';
+        } else if (data.queue_length > 0) {
+            elements.queueMessage.textContent = `📝 ${data.queue_length} job(s) in queue`;
+        } else if (data.active_jobs > 0) {
+            elements.queueMessage.textContent = '🔄 Processing jobs...';
+        }
+    } else {
+        elements.queueStatusDiv.style.display = 'none';
+    }
+}
+
+async function submitQueueJob() {
+    const file = currentFiles.queue;
+    if (!file) {
+        showResult('queue', 'Please select a file first', true);
+        return;
+    }
+
+    // Get optimization parameters
+    const optimizationParams = getOptimizationParams('queue');
+
+    const formData = new FormData();
+    formData.append('file', file);
+    Object.keys(optimizationParams).forEach(key => {
+        if (optimizationParams[key] !== null && optimizationParams[key] !== undefined) {
+            formData.append(key, optimizationParams[key]);
+        }
+    });
+
+    try {
+        showLoading('queue', true);
+
+        const response = await fetch(`${API_BASE}/queue/remove-background`, {
+            method: 'POST',
+            body: formData
+        });
+
+        if (response.ok) {
+            const data = await response.json();
+            currentJobId = data.job_id;
+
+            // Show processing status
+            showQueueProcessing(data.job_id);
+
+            // Start polling for job status
+            startJobStatusPolling(data.job_id);
+
+        } else {
+            const errorData = await response.json();
+            showResult('queue', `Error: ${errorData.error || 'Failed to submit job'}`, true);
+        }
+    } catch (error) {
+        showResult('queue', `Network Error: ${error.message}`, true);
+    } finally {
+        showLoading('queue', false);
+    }
+}
+
+function showQueueProcessing(jobId) {
+    // Hide upload area
+    if (elements.queueUploadContainer) {
+        elements.queueUploadContainer.style.display = 'none';
+    }
+
+    // Show processing status
+    if (elements.queueProcessingStatus) {
+        elements.queueProcessingStatus.style.display = 'block';
+    }
+
+    // Set job ID
+    if (elements.currentJobId) {
+        elements.currentJobId.textContent = jobId;
+    }
+
+    // Reset progress
+    updateJobProgress(0, 'Job submitted to queue...');
+}
+
+function updateJobProgress(progress, message) {
+    if (elements.jobProgressBar) {
+        elements.jobProgressBar.style.width = progress + '%';
+    }
+    if (elements.jobMessage) {
+        elements.jobMessage.textContent = message;
+    }
+}
+
+function updateJobStatus(status, message, progress = null) {
+    if (elements.jobStatus) {
+        elements.jobStatus.textContent = status;
+        elements.jobStatus.style.color = status === 'completed' ? '#28a745' :
+                                       status === 'failed' ? '#dc3545' : '#007bff';
+    }
+    if (message && elements.jobMessage) {
+        elements.jobMessage.textContent = message;
+    }
+    if (progress !== null && elements.jobProgressBar) {
+        elements.jobProgressBar.style.width = progress + '%';
+    }
+}
+
+async function checkJobStatus(jobId = null) {
+    const id = jobId || currentJobId;
+    if (!id) return;
+
+    try {
+        const response = await fetch(`${API_BASE}/queue/job/${id}`);
+        if (response.ok) {
+            const jobData = await response.json();
+            updateJobStatus(jobData.status, jobData.message, jobData.progress);
+
+            if (jobData.status === 'completed') {
+                handleJobCompleted(id);
+            } else if (jobData.status === 'failed') {
+                handleJobFailed(id, jobData.message);
+            }
+        }
+    } catch (error) {
+        debugLog('Error checking job status:', error);
+    }
+}
+
+function startJobStatusPolling(jobId) {
+    // Clear any existing interval
+    if (queueStatusInterval) {
+        clearInterval(queueStatusInterval);
+    }
+
+    // Check status immediately
+    checkJobStatus(jobId);
+
+    // Then poll every 2 seconds
+    queueStatusInterval = setInterval(() => {
+        checkJobStatus(jobId);
+    }, 2000);
+}
+
+function stopJobStatusPolling() {
+    if (queueStatusInterval) {
+        clearInterval(queueStatusInterval);
+        queueStatusInterval = null;
+    }
+}
+
+function handleJobCompleted(jobId) {
+    stopJobStatusPolling();
+    updateJobProgress(100, 'Job completed successfully!');
+
+    // Show download button
+    if (elements.downloadResultBtn) {
+        elements.downloadResultBtn.style.display = 'inline-block';
+        elements.downloadResultBtn.onclick = () => downloadJobResult(jobId);
+    }
+
+    // Show success message
+    showResult('queue', `
+        <div class="success-message">
+            <h3>✅ Background Removed Successfully!</h3>
+            <p>Your image has been processed and is ready for download.</p>
+            <div style="text-align: center; margin-top: 20px;">
+                <button type="button" class="btn btn-primary" onclick="downloadJobResult('${jobId}')">
+                    📥 Download Result
+                </button>
+            </div>
+        </div>
+    `, false);
+}
+
+function handleJobFailed(jobId, errorMessage) {
+    stopJobStatusPolling();
+    updateJobProgress(100, `Job failed: ${errorMessage}`);
+
+    // Show error message
+    showResult('queue', `
+        <div class="error-message">
+            <h3>❌ Processing Failed</h3>
+            <p>${errorMessage}</p>
+            <div style="text-align: center; margin-top: 20px;">
+                <button type="button" class="btn btn-secondary" onclick="showQueueUpload()">
+                    🔄 Try Again
+                </button>
+            </div>
+        </div>
+    `, true);
+}
+
+async function downloadJobResult(jobId) {
+    try {
+        const response = await fetch(`${API_BASE}/queue/job/${jobId}/result`);
+        if (response.ok) {
+            const contentType = response.headers.get('Content-Type');
+
+            if (contentType && contentType.includes('application/json')) {
+                // It's a base64 result (for base64 jobs)
+                const data = await response.json();
+                if (data.success) {
+                    const imageUrl = `data:${data.mimetype};base64,${data.image}`;
+                    downloadImage(imageUrl, `no-bg-result.${data.info?.format?.toLowerCase() || 'png'}`);
+                } else {
+                    Swal.fire('Error', data.error || 'Failed to get result', 'error');
+                }
+            } else {
+                // It's a file download
+                const blob = await response.blob();
+                const url = URL.createObjectURL(blob);
+                const contentDisposition = response.headers.get('Content-Disposition');
+                const filename = contentDisposition ?
+                    contentDisposition.split('filename=')[1].replace(/"/g, '') :
+                    'no-bg-result.png';
+
+                downloadImage(url, filename);
+                URL.revokeObjectURL(url);
+            }
+        } else {
+            const errorData = await response.json();
+            Swal.fire('Error', errorData.error || 'Failed to download result', 'error');
+        }
+    } catch (error) {
+        Swal.fire('Error', `Network error: ${error.message}`, 'error');
+    }
+}
+
+// Queue UI State Management Functions
+function showQueueUpload() {
+    // Reset processing state
+    stopJobStatusPolling();
+    currentJobId = null;
+
+    // Show upload container
+    if (elements.queueUploadContainer) {
+        elements.queueUploadContainer.style.display = 'block';
+    }
+
+    // Hide processing container
+    if (elements.queueProcessingStatus) {
+        elements.queueProcessingStatus.style.display = 'none';
+    }
+
+    // Clear result
+    if (elements.queueResult) {
+        elements.queueResult.className = 'result';
+        elements.queueResult.innerHTML = '';
+    }
+
+    // Reset file input
+    if (elements.queueFile) {
+        elements.queueFile.value = '';
+    }
+
+    // Reset button state
+    if (elements.queueBtn) {
+        elements.queueBtn.disabled = true;
+    }
+
+    // Clear current file
+    currentFiles.queue = null;
+}
+
+function showQueueResult() {
+    // Hide upload container
+    if (elements.queueUploadContainer) {
+        elements.queueUploadContainer.style.display = 'none';
+    }
+
+    // Show "Process other file" button
+    if (elements.queueNewFileContainer) {
+        elements.queueNewFileContainer.style.display = 'block';
+    }
+}
+
+// Queue status functions for tabs
+function showQueueStatusForTab(tab, jobId, queuePosition = 1) {
+    // Hide upload container
+    if (tab === 'preview' && elements.previewUploadContainer) {
+        elements.previewUploadContainer.style.display = 'none';
+    } else if (tab === 'base64' && elements.base64InputContainer) {
+        elements.base64InputContainer.style.display = 'none';
+    }
+
+    // Show queue status
+    const queueStatusElement = elements[`${tab}-queue-status`];
+    if (queueStatusElement) {
+        queueStatusElement.style.display = 'block';
+    }
+
+    // Set job ID and position
+    const jobIdElement = elements[`${tab}-job-id`];
+    const queuePositionElement = elements[`${tab}-queue-position`];
+    if (jobIdElement) {
+        jobIdElement.textContent = jobId;
+    }
+    if (queuePositionElement) {
+        queuePositionElement.textContent = queuePosition;
+    }
+
+    // Reset progress and status
+    updateJobProgressForTab(tab, 0, 'Job added to queue...');
+    updateJobStatusForTab(tab, 'queued', 'Your job is in queue...');
+
+    // Store current job ID for polling
+    if (tab === 'preview') {
+        currentPreviewJobId = jobId;
+    } else if (tab === 'base64') {
+        currentBase64JobId = jobId;
+    }
+}
+
+function updateJobProgressForTab(tab, progress, message) {
+    const progressBar = elements[`${tab}-job-progress-bar`];
+    const messageElement = elements[`${tab}-job-message`];
+
+    if (progressBar) {
+        progressBar.style.width = progress + '%';
+    }
+    if (messageElement) {
+        messageElement.textContent = message;
+    }
+}
+
+function updateJobStatusForTab(tab, status, message) {
+    const statusElement = elements[`${tab}-job-status`];
+    const messageElement = elements[`${tab}-job-message`];
+
+    if (statusElement) {
+        statusElement.textContent = status;
+        statusElement.style.color = status === 'completed' ? '#28a745' :
+                                  status === 'failed' ? '#dc3545' : '#007bff';
+    }
+    if (messageElement) {
+        messageElement.textContent = message;
+    }
+}
+
+function startQueuePollingForTab(tab, jobId) {
+    // Check status immediately
+    checkJobStatusForTab(tab, jobId);
+
+    // Then poll every 2 seconds
+    const intervalId = setInterval(() => {
+        checkJobStatusForTab(tab, jobId);
+    }, 2000);
+
+    // Store interval ID for cleanup
+    if (tab === 'preview') {
+        if (previewQueueInterval) clearInterval(previewQueueInterval);
+        previewQueueInterval = intervalId;
+    } else if (tab === 'base64') {
+        if (base64QueueInterval) clearInterval(base64QueueInterval);
+        base64QueueInterval = intervalId;
+    }
+}
+
+async function checkJobStatusForTab(tab, jobId) {
+    try {
+        const response = await fetch(`${API_BASE}/queue/job/${jobId}`);
+        if (response.ok) {
+            const jobData = await response.json();
+            updateJobStatusForTab(tab, jobData.status, jobData.message, jobData.progress);
+            updateJobProgressForTab(tab, jobData.progress, jobData.message);
+
+            // Update queue position if available
+            if (jobData.queue_position > 0) {
+                const queuePositionElement = elements[`${tab}-queue-position`];
+                if (queuePositionElement) {
+                    queuePositionElement.textContent = jobData.queue_position;
+                }
+            }
+
+            if (jobData.status === 'completed') {
+                handleJobCompletedForTab(tab, jobId);
+            } else if (jobData.status === 'failed') {
+                handleJobFailedForTab(tab, jobId, jobData.message);
+            }
+        }
+    } catch (error) {
+        debugLog(`Error checking ${tab} job status:`, error);
+    }
+}
+
+function handleJobCompletedForTab(tab, jobId) {
+    // Stop polling
+    if (tab === 'preview' && previewQueueInterval) {
+        clearInterval(previewQueueInterval);
+        previewQueueInterval = null;
+    } else if (tab === 'base64' && base64QueueInterval) {
+        clearInterval(base64QueueInterval);
+        base64QueueInterval = null;
+    }
+
+    updateJobProgressForTab(tab, 100, 'Job completed successfully!');
+
+    // Show download button
+    const downloadBtn = elements[`${tab}-download-result-btn`];
+    if (downloadBtn) {
+        downloadBtn.style.display = 'inline-block';
+        downloadBtn.onclick = () => downloadJobResultForTab(tab, jobId);
+    }
+
+    // Download and show result automatically for preview
+    if (tab === 'preview') {
+        downloadJobResultForTab(tab, jobId, true); // true = show image directly
+    }
+}
+
+function handleJobFailedForTab(tab, jobId, errorMessage) {
+    // Stop polling
+    if (tab === 'preview' && previewQueueInterval) {
+        clearInterval(previewQueueInterval);
+        previewQueueInterval = null;
+    } else if (tab === 'base64' && base64QueueInterval) {
+        clearInterval(base64QueueInterval);
+        base64QueueInterval = null;
+    }
+
+    updateJobProgressForTab(tab, 100, `Job failed: ${errorMessage}`);
+
+    // Show error message and retry button
+    const queueStatusElement = elements[`${tab}-queue-status`];
+    if (queueStatusElement) {
+        queueStatusElement.innerHTML = `
+            <div class="error-message">
+                <h3>❌ Processing Failed</h3>
+                <p>${errorMessage}</p>
+                <div style="text-align: center; margin-top: 20px;">
+                    <button type="button" class="btn btn-secondary" onclick="reset${tab.charAt(0).toUpperCase() + tab.slice(1)}Tab()">
+                        🔄 Try Again
+                    </button>
+                </div>
+            </div>
+        `;
+    }
+}
+
+async function downloadJobResultForTab(tab, jobId, showDirectly = false) {
+    try {
+        const response = await fetch(`${API_BASE}/queue/job/${jobId}/result`);
+        if (response.ok) {
+            const contentType = response.headers.get('Content-Type');
+
+            if (contentType && contentType.includes('application/json')) {
+                // It's a base64 result (for base64 jobs)
+                const data = await response.json();
+                if (data.success) {
+                    if (tab === 'base64') {
+                        // Show base64 result in the result container
+                        showBase64Result(data.image, data.info);
+                    } else {
+                        // Convert to blob and show
+                        const imageUrl = `data:${data.mimetype};base64,${data.image}`;
+                        showOptimizedImage(tab, imageUrl, data.info);
+                    }
+                } else {
+                    Swal.fire('Error', data.error || 'Failed to get result', 'error');
+                }
+            } else {
+                // It's a file download
+                const blob = await response.blob();
+                const url = URL.createObjectURL(blob);
+                const contentDisposition = response.headers.get('Content-Disposition');
+                const filename = contentDisposition ?
+                    contentDisposition.split('filename=')[1].replace(/"/g, '') :
+                    'no-bg-result.png';
+
+                if (showDirectly && tab === 'preview') {
+                    // Show image directly for preview
+                    showOptimizedImage(tab, url, {
+                        width: response.headers.get('X-Image-Width') || 'Unknown',
+                        height: response.headers.get('X-Image-Height') || 'Unknown',
+                        format: response.headers.get('X-Format') || 'PNG'
+                    });
+                } else {
+                    // Download file
+                    downloadImage(url, filename);
+                }
+                URL.revokeObjectURL(url);
+            }
+        } else {
+            const errorData = await response.json();
+            Swal.fire('Error', errorData.error || 'Failed to download result', 'error');
+        }
+    } catch (error) {
+        Swal.fire('Error', `Network error: ${error.message}`, 'error');
+    }
+}
+
+function resetPreviewTab() {
+    if (elements.previewUploadContainer) {
+        elements.previewUploadContainer.style.display = 'block';
+    }
+    if (elements.previewQueueStatus) {
+        elements.previewQueueStatus.style.display = 'none';
+    }
+    if (elements.previewFile) {
+        elements.previewFile.value = '';
+    }
+    if (elements.previewBtn) {
+        elements.previewBtn.disabled = true;
+    }
+    currentFiles.preview = null;
+    currentPreviewJobId = null;
+}
+
+function resetBase64Tab() {
+    if (elements.base64InputContainer) {
+        elements.base64InputContainer.style.display = 'block';
+    }
+    if (elements.base64QueueStatus) {
+        elements.base64QueueStatus.style.display = 'none';
+    }
+    if (elements.base64Input) {
+        elements.base64Input.value = '';
+    }
+    if (elements.base64Btn) {
+        elements.base64Btn.disabled = true;
+    }
+    currentBase64Data = null;
+    currentBase64JobId = null;
+}
+
 // App Info Loading
 async function loadAppInfo() {
     try {
@@ -826,6 +1451,9 @@ async function loadAppInfo() {
                 // Update app name in footer
                 elements.appName.textContent = data.app_name;
             }
+            if (data.queue_config && elements.maxConcurrent) {
+                elements.maxConcurrent.textContent = data.queue_config.max_concurrent_jobs;
+            }
         }
     } catch (error) {
         // Keep default values if API is not available
@@ -840,6 +1468,10 @@ function initializeApp() {
 
     // Load app info
     loadAppInfo();
+
+    // Start queue status monitoring
+    setInterval(loadQueueStatus, 5000); // Update every 5 seconds
+    loadQueueStatus(); // Initial load
 
     // Add comprehensive event prevention for ALL forms
     document.querySelectorAll('form').forEach(form => {
@@ -930,6 +1562,53 @@ function initializeApp() {
         });
     }
 
+    // Queue file input event listener
+    if (elements.queueFile) {
+        elements.queueFile.addEventListener('change', function(e) {
+            debugLog('DEBUG: Queue file selected, files:', e.target.files);
+            e.preventDefault();
+            if (e.target.files && e.target.files.length > 0) {
+                debugLog('DEBUG: Processing queue file:', e.target.files[0].name);
+                handleFile(e.target.files[0], 'queue');
+            } else {
+                debugLog('DEBUG: No queue files selected');
+            }
+        });
+    }
+
+    // Queue button event listener
+    if (elements.queueBtn) {
+        elements.queueBtn.addEventListener('click', function(e) {
+            debugLog('DEBUG: Queue button clicked');
+            e.preventDefault();
+            e.stopPropagation();
+            e.stopImmediatePropagation();
+            submitQueueJob();
+        });
+    }
+
+    // Queue new file button event listener
+    if (elements.queueNewFileBtn) {
+        elements.queueNewFileBtn.addEventListener('click', function(e) {
+            debugLog('DEBUG: Queue process other file button clicked');
+            e.preventDefault();
+            e.stopPropagation();
+            e.stopImmediatePropagation();
+            showQueueUpload();
+        });
+    }
+
+    // Check status button event listener
+    if (elements.checkStatusBtn) {
+        elements.checkStatusBtn.addEventListener('click', function(e) {
+            debugLog('DEBUG: Check status button clicked');
+            e.preventDefault();
+            e.stopPropagation();
+            e.stopImmediatePropagation();
+            checkJobStatus();
+        });
+    }
+
     // Base64 input event listeners
     if (elements.base64Input) {
         elements.base64Input.addEventListener('input', handleBase64Input);
@@ -958,6 +1637,15 @@ function initializeApp() {
         });
     }
 
+    // Queue quality slider event listener
+    if (elements.queueQuality) {
+        elements.queueQuality.addEventListener('input', function() {
+            if (elements.queueQualityValue) {
+                elements.queueQualityValue.textContent = this.value;
+            }
+        });
+    }
+
     // Preset button event listeners
     document.addEventListener('click', function(e) {
         if (e.target.matches('[data-preset]')) {
@@ -968,6 +1656,11 @@ function initializeApp() {
         if (e.target.matches('[data-preset-base64]')) {
             const preset = e.target.getAttribute('data-preset-base64');
             applyPreset(preset, 'base64');
+        }
+
+        if (e.target.matches('[data-preset-queue]')) {
+            const preset = e.target.getAttribute('data-preset-queue');
+            applyPreset(preset, 'queue');
         }
     });
 
@@ -1191,8 +1884,21 @@ async function processPreviewLocal() {
         });
 
         if (response.ok) {
-            const blob = await response.blob();
-            const imageUrl = URL.createObjectURL(blob);
+            // Check if this is a direct processing result (image) or queued response (JSON)
+            const contentType = response.headers.get('Content-Type');
+
+            if (contentType && contentType.includes('application/json')) {
+                // This is a queued response
+                const data = await response.json();
+                if (data.job_id) {
+                    // Show queue processing status
+                    showQueueStatusForTab('preview', data.job_id, data.queue_position);
+                    startQueuePollingForTab('preview', data.job_id);
+                }
+            } else {
+                // This is a direct processing result
+                const blob = await response.blob();
+                const imageUrl = URL.createObjectURL(blob);
 
             // Get optimization info from response headers
             const originalSize = parseInt(response.headers.get('X-Original-Size') || '0');
@@ -1238,6 +1944,7 @@ async function processPreviewLocal() {
 
             // Show result and hide upload area
             showPreviewResult();
+            } // Close the else block for direct processing
         } else {
             const errorText = await response.text();
             showResult('preview', `Error: ${errorText}`, true);
@@ -1285,7 +1992,12 @@ async function processBase64Local() {
             const data = await response.json();
             debugLog('DEBUG: API response data:', data);
 
-            if (data.success) {
+            if (data.job_id) {
+                // This is a queued response
+                showQueueStatusForTab(tab === 'base64' ? 'base64' : 'preview', data.job_id, data.queue_position);
+                startQueuePollingForTab(tab === 'base64' ? 'base64' : 'preview', data.job_id);
+            } else if (data.success) {
+                // This is a direct processing result
                 const imageUrl = `data:${data.mimetype};base64,${data.image}`;
                 const imageSize = Math.round(data.image.length * 0.75 / 1024);
 
