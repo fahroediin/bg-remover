@@ -2,7 +2,17 @@
 
 // Configuration
 // Force use port 5001 for development
-const API_BASE = window.location.protocol + '//' + window.location.hostname + ':5001';
+// Smart API BASE configuration
+const API_BASE = (() => {
+    // For development (localhost/127.0.0.1), use port 5001
+    if (window.location.hostname === 'localhost' ||
+        window.location.hostname === '127.0.0.1' ||
+        window.location.hostname.includes('dev')) {
+        return window.location.protocol + '//' + window.location.hostname + ':5001';
+    }
+    // For production, use same host without port
+    return window.location.protocol + '//' + window.location.hostname;
+})();
 
 // Debug mode - disable in production
 const DEBUG_MODE = window.location.hostname === 'localhost' ||
